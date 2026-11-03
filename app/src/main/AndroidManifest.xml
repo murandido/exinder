@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Leitura de fotos e vídeos. Até o Android 12L a permissão era uma só. -->
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+
+    <!--
+        "Gerenciamento de mídia": deixa o app mandar arquivos para a lixeira e
+        marcar favoritos sem o Android pedir confirmação a cada arquivo.
+        O usuário concede uma vez, nas configurações do sistema.
+    -->
+    <uses-permission
+        android:name="android.permission.MANAGE_MEDIA"
+        tools:ignore="ProtectedPermissions" />
+
+    <!-- De propósito, não existe permissão de INTERNET: nada sai do aparelho. -->
+
+    <application
+        android:name=".ExinderApp"
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Exinder">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:screenOrientation="portrait"
+            tools:ignore="DiscouragedApi,LockedOrientationActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
