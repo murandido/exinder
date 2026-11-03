@@ -1,0 +1,5 @@
+# Finais de linha normalizados; scripts do Windows mantêm CRLF.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.jar binary
+*.png binary
