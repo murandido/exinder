@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Verde brat: a cor da marca. -->
+    <color name="brat">#FF8ACE00</color>
+    <color name="ink">#FF000000</color>
+    <color name="window_background">#FFFFFFFF</color>
+</resources>
