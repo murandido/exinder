@@ -13,19 +13,24 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
@@ -268,17 +273,20 @@ private fun TopBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         ExinderLogo()
-        Spacer(Modifier.weight(1f))
-        Text(
-            folder.name,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 15.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier
-                .widthIn(max = 180.dp)
-                .clickable(onClick = onChangeFolder),
-        )
+        // The folder name takes whatever room is left and shrinks first, so the
+        // menu button keeps its size even with a long name and large fonts.
+        Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
+            Text(
+                folder.name,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 15.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .padding(start = 12.dp)
+                    .clickable(onClick = onChangeFolder),
+            )
+        }
         Box {
             IconButton(onClick = { menu = true }) {
                 Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.cd_menu))
@@ -711,66 +719,83 @@ private fun ColumnScope.EmptyState(onChangeFolder: () -> Unit) {
  */
 @Composable
 private fun ColumnScope.Summary(ui: SwipeUi, trash: TrashStats, vm: SwipeViewModel, onChangeFolder: () -> Unit) {
-    Column(
-        Modifier
-            .weight(1f)
-            .fillMaxWidth()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(
-            stringResource(R.string.summary_title),
-            fontFamily = Condensed,
-            fontWeight = FontWeight.Bold,
-            fontSize = 34.sp,
-            color = Brat,
-        )
-        Spacer(Modifier.height(28.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            val kept = ui.count(Status.MANTER)
-            val favorites = ui.count(Status.FAVORITO)
-            StatBlock(kept, pluralStringResource(R.plurals.stat_kept, kept))
-            StatBlock(favorites, pluralStringResource(R.plurals.stat_favorites, favorites))
-            StatBlock(trash.count, stringResource(R.string.stat_in_trash))
-        }
-        Spacer(Modifier.height(16.dp))
-        Text(
-            stringResource(R.string.freed, formatBytes(trash.bytes)),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        val pending = ui.pending.size
-        if (pending > 0) {
+    // Centered when it fits, scrollable when it doesn't (large fonts, small screens).
+    BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+        Column(
+            Modifier
+                .verticalScroll(rememberScrollState())
+                .fillMaxWidth()
+                .heightIn(min = maxHeight)
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                stringResource(R.string.summary_title),
+                fontFamily = Condensed,
+                fontWeight = FontWeight.Bold,
+                fontSize = 34.sp,
+                // The theme's green: brat green itself is too faint as text on white.
+                color = MaterialTheme.colorScheme.primary,
+            )
             Spacer(Modifier.height(28.dp))
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Nope.copy(alpha = 0.12f))
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
+            // Wraps to a second line instead of squeezing big numbers.
+            FlowRow(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text(
-                    pluralStringResource(R.plurals.summary_pending, pending, pending),
-                    fontWeight = FontWeight.SemiBold,
-                    textAlign = TextAlign.Center,
-                )
-                Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedButton(onClick = { vm.rewind() }) { Text(stringResource(R.string.action_back)) }
-                    Button(
-                        onClick = { vm.flushPending() },
-                        colors = ButtonDefaults.buttonColors(containerColor = Nope, contentColor = Color.White),
-                    ) { Text(stringResource(R.string.action_send_now), fontWeight = FontWeight.Bold) }
+                val kept = ui.count(Status.MANTER)
+                val favorites = ui.count(Status.FAVORITO)
+                StatBlock(kept, pluralStringResource(R.plurals.stat_kept, labelCount(kept)))
+                StatBlock(favorites, pluralStringResource(R.plurals.stat_favorites, labelCount(favorites)))
+                StatBlock(trash.count, stringResource(R.string.stat_in_trash))
+            }
+            Spacer(Modifier.height(16.dp))
+            Text(
+                stringResource(R.string.freed, formatBytes(trash.bytes)),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            val pending = ui.pending.size
+            if (pending > 0) {
+                Spacer(Modifier.height(28.dp))
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Nope.copy(alpha = 0.12f))
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        pluralStringResource(R.plurals.summary_pending, pending, pending),
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedButton(onClick = { vm.rewind() }) { Text(stringResource(R.string.action_back)) }
+                        Button(
+                            onClick = { vm.flushPending() },
+                            colors = ButtonDefaults.buttonColors(containerColor = Nope, contentColor = Color.White),
+                        ) { Text(stringResource(R.string.action_send_now), fontWeight = FontWeight.Bold) }
+                    }
                 }
             }
-        }
 
-        Spacer(Modifier.height(28.dp))
-        BratButton(stringResource(R.string.action_pick_another), onChangeFolder)
+            Spacer(Modifier.height(28.dp))
+            BratButton(stringResource(R.string.action_pick_another), onChangeFolder)
+        }
     }
 }
+
+/**
+ * Quantity used to pick a label's plural form. Zero reads as plural in both
+ * languages ("0 favorites", "0 favoritos"), but Portuguese grammar files put 0
+ * in the singular group, which would print "0 favorito".
+ */
+private fun labelCount(n: Int): Int = if (n == 0) 2 else n
 
 @Composable
 private fun StatBlock(value: Int, label: String) {

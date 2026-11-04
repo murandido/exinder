@@ -8,16 +8,21 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.DeleteSweep
@@ -100,64 +105,84 @@ fun PermissionsScreen(hasMedia: Boolean, canManage: Boolean, onRecheck: () -> Un
         )
     }
 
-    Column(
-        modifier = Modifier
+    // Centered when it fits, scrollable when it doesn't (large fonts, small
+    // screens), so "continue without it" is always reachable.
+    BoxWithConstraints(
+        Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .systemBarsPadding()
-            .padding(horizontal = 24.dp, vertical = 32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+            .systemBarsPadding(),
     ) {
-        ExinderLogo(size = 64.sp)
-        Spacer(Modifier.height(8.dp))
-        Text(
-            text = stringResource(R.string.tagline),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(40.dp))
+        Column(
+            modifier = Modifier
+                .verticalScroll(rememberScrollState())
+                .fillMaxWidth()
+                .heightIn(min = maxHeight)
+                .padding(horizontal = 24.dp, vertical = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            ExinderLogo(size = 64.sp)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.tagline),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(40.dp))
 
-        PermissionStep(
-            icon = Icons.Rounded.PhotoLibrary,
-            title = stringResource(R.string.perm_media_title),
-            description = when {
-                // "Limited access": requesting again lets the user switch to "allow all".
-                partial -> stringResource(R.string.perm_media_partial)
+            PermissionStep(
+                icon = Icons.Rounded.PhotoLibrary,
+                title = stringResource(R.string.perm_media_title),
+                description = when {
+                    // "Limited access": requesting again lets the user switch to "allow all".
+                    partial -> stringResource(R.string.perm_media_partial)
 
-                blocked -> stringResource(R.string.perm_media_blocked)
+                    blocked -> stringResource(R.string.perm_media_blocked)
 
-                else -> stringResource(R.string.perm_media_desc)
-            },
-            granted = hasMedia,
-            action = stringResource(if (blocked && !partial) R.string.action_open_settings else R.string.action_allow),
-            onAction = { if (blocked && !partial) openAppSettings() else launchRequest() },
-        )
-        Spacer(Modifier.height(12.dp))
-        PermissionStep(
-            icon = Icons.Rounded.DeleteSweep,
-            title = stringResource(R.string.perm_manage_title),
-            description = stringResource(R.string.perm_manage_desc),
-            granted = canManage,
-            action = stringResource(R.string.action_open_settings),
-            onAction = {
-                // Some devices don't have this settings page; fall back to the
-                // app's settings rather than crashing.
-                try {
-                    context.startActivity(
-                        Intent(Settings.ACTION_REQUEST_MANAGE_MEDIA, "package:${context.packageName}".toUri()),
+                    else -> stringResource(R.string.perm_media_desc)
+                },
+                granted = hasMedia,
+                action = stringResource(
+                    if (blocked &&
+                        !partial
+                    ) {
+                        R.string.action_open_settings
+                    } else {
+                        R.string.action_allow
+                    },
+                ),
+                onAction = { if (blocked && !partial) openAppSettings() else launchRequest() },
+            )
+            Spacer(Modifier.height(12.dp))
+            PermissionStep(
+                icon = Icons.Rounded.DeleteSweep,
+                title = stringResource(R.string.perm_manage_title),
+                description = stringResource(R.string.perm_manage_desc),
+                granted = canManage,
+                action = stringResource(R.string.action_open_settings),
+                onAction = {
+                    // Some devices don't have this settings page; fall back to the
+                    // app's settings rather than crashing.
+                    try {
+                        context.startActivity(
+                            Intent(Settings.ACTION_REQUEST_MANAGE_MEDIA, "package:${context.packageName}".toUri()),
+                        )
+                    } catch (_: ActivityNotFoundException) {
+                        openAppSettings()
+                    }
+                },
+            )
+
+            // The second permission is optional, and only offered after the first.
+            if (hasMedia && !canManage) {
+                Spacer(Modifier.height(16.dp))
+                TextButton(onClick = onSkipManage) {
+                    Text(
+                        stringResource(R.string.action_skip_manage),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                } catch (_: ActivityNotFoundException) {
-                    openAppSettings()
                 }
-            },
-        )
-
-        // The second permission is optional, and only offered after the first.
-        if (hasMedia && !canManage) {
-            Spacer(Modifier.height(16.dp))
-            TextButton(onClick = onSkipManage) {
-                Text(stringResource(R.string.action_skip_manage), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -202,10 +227,13 @@ private fun PermissionStep(
                 modifier = Modifier.size(28.dp),
             )
         } else {
+            // Capped width, so the explanation next to it keeps most of the row
+            // even with large fonts; a long label wraps inside the button.
             Button(
                 onClick = onAction,
                 colors = ButtonDefaults.buttonColors(containerColor = Brat, contentColor = Ink),
-            ) { Text(action, fontWeight = FontWeight.Bold) }
+                modifier = Modifier.widthIn(max = 140.dp),
+            ) { Text(action, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center) }
         }
     }
 }
