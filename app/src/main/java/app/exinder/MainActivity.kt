@@ -20,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -73,6 +74,18 @@ private fun ExinderRoot(container: AppContainer) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    // Tela atual, guardada como texto para sobreviver à recriação da Activity
+    // (troca de tema, por exemplo): "" é a lista de pastas, o resto é a chave
+    // da pasta aberta. Fica aqui em cima, antes dos `return` da tela de
+    // permissões, para não ser esquecida enquanto ela aparece.
+    var saved by rememberSaveable { mutableStateOf<String?>(null) }
+    fun go(screen: Screen) {
+        saved = when (screen) {
+            Screen.Folders -> ""
+            is Screen.Swipe -> screen.folder.key
+        }
+    }
+
     // As permissões podem mudar fora do app (nas configurações), então são
     // conferidas de novo toda vez que o app volta para a frente.
     var hasMedia by remember { mutableStateOf(hasMediaPermission(context)) }
@@ -104,13 +117,13 @@ private fun ExinderRoot(container: AppContainer) {
         return
     }
 
-    var screen by remember { mutableStateOf<Screen?>(null) }
     LaunchedEffect(Unit) {
-        if (screen == null) {
+        if (saved == null) {
             val last = container.prefs.lastFolder.first()
-            screen = if (last != null) Screen.Swipe(last) else Screen.Folders
+            go(if (last != null) Screen.Swipe(last) else Screen.Folders)
         }
     }
+    val screen = saved?.let { key -> FolderRef.fromKey(key)?.let(Screen::Swipe) ?: Screen.Folders }
 
     when (val current = screen) {
         null -> Box(background)
@@ -119,16 +132,16 @@ private fun ExinderRoot(container: AppContainer) {
             container = container,
             onOpen = { folder ->
                 scope.launch { container.prefs.setLastFolder(folder) }
-                screen = Screen.Swipe(folder)
+                go(Screen.Swipe(folder))
             },
         )
 
         is Screen.Swipe -> {
-            BackHandler { screen = Screen.Folders }
+            BackHandler { go(Screen.Folders) }
             SwipeScreen(
                 container = container,
                 folder = current.folder,
-                onChangeFolder = { screen = Screen.Folders },
+                onChangeFolder = { go(Screen.Folders) },
             )
         }
     }
