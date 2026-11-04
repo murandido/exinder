@@ -123,22 +123,49 @@ class SwipeViewModel(
     /** Avisos curtos para mostrar em toast. */
     val messages: SharedFlow<String> = _messages.asSharedFlow()
 
-    init {
-        load()
-    }
-
-    /** Lê a pasta e as decisões salvas, e posiciona o cursor no primeiro arquivo não revisado. */
+    /**
+     * Lê a pasta e as decisões salvas, e posiciona o cursor no primeiro
+     * arquivo não revisado. A tela chama toda vez que a pasta é aberta, para
+     * pegar arquivos novos ou apagados por fora desde a última vez.
+     */
     fun load() {
         viewModelScope.launch {
             _ui.value = SwipeUi(loading = true)
 
-            val items = container.media.items(folder)
-            val present = items.mapTo(HashSet()) { it.key }
+            val found = container.media.items(folder)
+            val present = found.mapTo(HashSet()) { it.key }
             val decisions = container.decisions.forFolder(folder.key)
+
+            // "Na lixeira" mas ainda na pasta: o usuário restaurou o arquivo pela
+            // galeria. A decisão antiga é esquecida e ele volta para a fila.
+            val restored = decisions.filter { it.status == Status.NA_LIXEIRA && it.uri in present }
+            restored.forEach { container.decisions.delete(it.uri) }
+
             val status = decisions
-                .filter { it.uri in present }
+                .filter { it.uri in present && it !in restored }
                 .associate { it.uri to it.status }
-            val trashedEarlier = decisions.count { it.status == Status.NA_LIXEIRA && it.uri !in present }
+
+            // Marcado para a lixeira e sumido da pasta: o app morreu entre o
+            // arquivo ir para a lixeira e gravar isso. Registra agora, para o
+            // contador e os "liberados" ficarem certos (e para o arquivo, se for
+            // restaurado depois, cair no caso acima em vez de voltar para a lixeira).
+            decisions
+                .filter { it.status == Status.LIXEIRA_PENDENTE && it.uri !in present }
+                .forEach { container.decisions.setStatus(it.uri, Status.NA_LIXEIRA) }
+            val trashedEarlier = decisions.count {
+                it.uri !in present && (it.status == Status.NA_LIXEIRA || it.status == Status.LIXEIRA_PENDENTE)
+            }
+
+            // Arquivos sem decisão que ficaram para trás do ponto onde o usuário
+            // parou (chegaram depois, com data antiga, ou foram restaurados) vão
+            // para o fim da fila, em vez de interromper a revisão lá no começo.
+            val lastDecided = found.indexOfLast { it.key in status }
+            val items = if (lastDecided < 0) {
+                found
+            } else {
+                val (late, rest) = found.withIndex().partition { (i, f) -> i < lastDecided && f.key !in status }
+                rest.map { it.value } + late.map { it.value }
+            }
 
             val ui = SwipeUi(loading = false, items = items, status = status, trashedEarlier = trashedEarlier)
             _ui.value = ui.copy(cursor = ui.nextUndecided(0) ?: items.size)

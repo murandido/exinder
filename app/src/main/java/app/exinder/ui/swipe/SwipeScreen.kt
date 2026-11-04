@@ -152,6 +152,9 @@ fun SwipeScreen(
     onChangeFolder: () -> Unit,
 ) {
     val vm: SwipeViewModel = viewModel(key = folder.key) { SwipeViewModel(container, folder) }
+    // Relê a pasta toda vez que ela é aberta: o ViewModel sobrevive entre uma
+    // visita e outra, e a pasta pode ter mudado por fora nesse meio-tempo.
+    LaunchedEffect(vm) { vm.load() }
     val ui by vm.ui.collectAsStateWithLifecycle()
     val trash by vm.trashStats.collectAsStateWithLifecycle()
     val context = LocalContext.current
