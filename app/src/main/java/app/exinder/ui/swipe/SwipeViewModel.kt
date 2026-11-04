@@ -44,6 +44,12 @@ data class SwipeUi(
     /** Preenchido logo após um rebobinar, para o card voltar animando do lado certo. */
     val enterFrom: Dir? = null,
     /**
+     * Arquivos já na lixeira por cima dos quais o último rebobinar passou, do
+     * mais próximo ao mais distante. A tela mostra cada um como um card cinza
+     * "na lixeira", de passagem, e depois limpa a lista.
+     */
+    val passedTrash: List<MediaFile> = emptyList(),
+    /**
      * Arquivos desta pasta mandados para a lixeira em sessões anteriores. Eles
      * já não aparecem em [items], mas entram no contador "N / total" para o
      * total não encolher a cada vez que o app é aberto.
@@ -240,11 +246,14 @@ class SwipeViewModel(
             ?: return false
         val file = ui.items[target]
         val previous = ui.statusOf(file)
+        val skipped = (minOf(ui.cursor, ui.items.size) - 1 downTo target + 1).map { ui.items[it] }
 
         _ui.update {
             it.copy(
                 status = it.status - file.key,
                 cursor = target,
+                // Acumula: o rebobinar até uma miniatura chama esta função várias vezes.
+                passedTrash = it.passedTrash + skipped,
                 // O card volta pelo mesmo lado por onde saiu.
                 enterFrom = when (previous) {
                     Status.MANTER -> Dir.RIGHT
@@ -278,6 +287,11 @@ class SwipeViewModel(
     /** A tela avisa que já animou a volta do card. */
     fun consumeEnter() {
         _ui.update { it.copy(enterFrom = null) }
+    }
+
+    /** A tela avisa que já mostrou os cards cinza "na lixeira". */
+    fun consumePassedTrash() {
+        _ui.update { it.copy(passedTrash = emptyList()) }
     }
 
     /** No fim da fila, manda para a lixeira o que ainda está no buffer. */

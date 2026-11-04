@@ -4,6 +4,7 @@ import android.widget.Toast
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,6 +27,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.MoreVert
@@ -58,6 +60,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
@@ -100,6 +104,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import kotlin.math.abs
 
 // ─── Física do swipe ────────────────────────────────────────────────────────
@@ -346,6 +351,35 @@ private fun ColumnScope.Deck(
         }
     }
 
+    // Rebobinar por cima de arquivos que já estão na lixeira: cada um passa
+    // como um card cinza, sem ação, antes do card de destino aparecer.
+    // Mostra no máximo 3; o último diz quantos mais foram pulados.
+    var ghost by remember { mutableStateOf<Ghost?>(null) }
+    val ghostX = remember { Animatable(0f) }
+    val ghostAlpha = remember { Animatable(0f) }
+    LaunchedEffect(ui.passedTrash) {
+        val passed = ui.passedTrash
+        if (passed.isEmpty() || area == IntSize.Zero) return@LaunchedEffect
+        // A lista só é limpa no fim: limpá-la muda a chave deste efeito, o que
+        // cancelaria a animação no meio. Um novo rebobinar durante a animação
+        // recomeça o efeito com a lista acumulada, e o `finally` não deixa um
+        // card cinza preso na tela.
+        try {
+            val shown = passed.take(3)
+            shown.forEachIndexed { i, file ->
+                ghost = Ghost(file, more = if (i == shown.lastIndex) passed.size - shown.size else 0)
+                ghostX.snapTo(-area.width * 0.6f)
+                ghostAlpha.snapTo(1f)
+                ghostX.animateTo(0f, tween(160, easing = FastOutSlowInEasing))
+                delay(220)
+                ghostAlpha.animateTo(0f, tween(140))
+            }
+        } finally {
+            ghost = null
+        }
+        vm.consumePassedTrash()
+    }
+
     /** Joga o card para fora da tela e só então registra a decisão. */
     fun fling(dir: Dir) {
         if (busy || area == IntSize.Zero) return
@@ -466,6 +500,12 @@ private fun ColumnScope.Deck(
                 )
             }
         }
+
+        // Cards cinza "na lixeira" por cima da pilha, de passagem.
+        ghost?.let { TrashedGhost(it.file, it.more, Modifier.fillMaxSize().graphicsLayer {
+            translationX = ghostX.value
+            alpha = ghostAlpha.value
+        }) }
     }
 
     PendingRow(ui, enabled = !busy, onRewindTo = vm::rewindTo)
@@ -688,4 +728,51 @@ private fun BratButton(text: String, onClick: () -> Unit) {
         onClick = onClick,
         colors = ButtonDefaults.buttonColors(containerColor = Brat, contentColor = Ink),
     ) { Text(text, fontWeight = FontWeight.Bold) }
+}
+
+/** Um card cinza de passagem, e quantos outros na lixeira foram pulados junto. */
+private data class Ghost(val file: MediaFile, val more: Int)
+
+/** Card cinza "na lixeira": a foto em preto e branco, escurecida, sem ação. */
+@Composable
+private fun TrashedGhost(file: MediaFile, more: Int, modifier: Modifier = Modifier) {
+    Box(
+        modifier
+            .padding(horizontal = 8.dp, vertical = 6.dp)
+            .clip(CardShape)
+            .background(Color(0xFF2A2C31)),
+        contentAlignment = Alignment.Center,
+    ) {
+        AsyncImage(
+            model = file.uri,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }),
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer { alpha = 0.35f },
+        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                Icons.Rounded.Delete,
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.85f),
+                modifier = Modifier.size(48.dp),
+            )
+            Text(
+                "na lixeira",
+                color = Color.White,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.ExtraBold,
+                fontFamily = Condensed,
+            )
+            if (more > 0) {
+                Text(
+                    "e mais ${formatCount(more)}",
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 15.sp,
+                )
+            }
+        }
+    }
 }
