@@ -52,21 +52,26 @@
     <plurals name="folder_reviewed">
         <item quantity="one">revisada · %1$s arquivo</item>
         <item quantity="other">revisada · %1$s arquivos</item>
+        <item quantity="many">revisada · %1$s arquivos</item>
     </plurals>
     <plurals name="files_count">
         <item quantity="one">%1$s arquivo</item>
         <item quantity="other">%1$s arquivos</item>
+        <item quantity="many">%1$s arquivos</item>
     </plurals>
     <plurals name="stat_kept">
         <item quantity="one">mantido</item>
         <item quantity="other">mantidos</item>
+        <item quantity="many">mantidos</item>
     </plurals>
     <plurals name="stat_favorites">
         <item quantity="one">favorito</item>
         <item quantity="other">favoritos</item>
+        <item quantity="many">favoritos</item>
     </plurals>
     <plurals name="summary_pending">
         <item quantity="one">%1$d arquivo vai pra lixeira</item>
         <item quantity="other">%1$d arquivos vão pra lixeira</item>
+        <item quantity="many">%1$d arquivos vão pra lixeira</item>
     </plurals>
 </resources>

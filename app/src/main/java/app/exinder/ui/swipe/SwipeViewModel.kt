@@ -1,6 +1,6 @@
 package app.exinder.ui.swipe
 
-import android.net.Uri
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.exinder.AppContainer
@@ -195,7 +195,7 @@ class SwipeViewModel(private val container: AppContainer, val folder: FolderRef)
                 matching
                     .filter { it.status == Status.LIXEIRA_PENDENTE && it.uri !in files && it.uri !in inFlight }
                     .forEach { d ->
-                        if (container.media.exists(Uri.parse(d.uri))) {
+                        if (container.media.exists(d.uri.toUri())) {
                             // Moved to another folder: it was never trashed.
                             container.decisions.delete(d.uri)
                         } else {

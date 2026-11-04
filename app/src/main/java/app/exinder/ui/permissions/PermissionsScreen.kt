@@ -3,7 +3,6 @@ package app.exinder.ui.permissions
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
-import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -46,6 +45,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
+import androidx.core.net.toUri
 import app.exinder.R
 import app.exinder.hasMediaPermission
 import app.exinder.hasPartialMediaAccess
@@ -96,7 +96,7 @@ fun PermissionsScreen(hasMedia: Boolean, canManage: Boolean, onRecheck: () -> Un
     val partial = !hasMedia && hasPartialMediaAccess(context)
     val openAppSettings = {
         context.startActivity(
-            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")),
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, "package:${context.packageName}".toUri()),
         )
     }
 
@@ -145,7 +145,7 @@ fun PermissionsScreen(hasMedia: Boolean, canManage: Boolean, onRecheck: () -> Un
                 // app's settings rather than crashing.
                 try {
                     context.startActivity(
-                        Intent(Settings.ACTION_REQUEST_MANAGE_MEDIA, Uri.parse("package:${context.packageName}")),
+                        Intent(Settings.ACTION_REQUEST_MANAGE_MEDIA, "package:${context.packageName}".toUri()),
                     )
                 } catch (_: ActivityNotFoundException) {
                     openAppSettings()

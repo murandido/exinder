@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -29,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.toDrawable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
@@ -72,7 +72,7 @@ class MainActivity : ComponentActivity() {
                 enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
                 // The window background (seen briefly during transitions) follows
                 // the app's theme too, not the system's.
-                window.setBackgroundDrawable(ColorDrawable(if (dark) DARK_WINDOW else Color.WHITE))
+                window.setBackgroundDrawable((if (dark) DARK_WINDOW else Color.WHITE).toDrawable())
             }
             ExinderTheme(dark) {
                 ExinderRoot(container)

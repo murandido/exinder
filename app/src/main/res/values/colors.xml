@@ -2,6 +2,5 @@
 <resources>
     <!-- Brat green: the brand color. -->
     <color name="brat">#FF8ACE00</color>
-    <color name="ink">#FF000000</color>
     <color name="window_background">#FFFFFFFF</color>
 </resources>
