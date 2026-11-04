@@ -58,10 +58,10 @@ E mesmo depois disso, o arquivo vai para a **lixeira do Android**, não é apaga
 
 | Permissão | Para quê | Obrigatória |
 | :-- | :-- | :-: |
-| Fotos e vídeos (`READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO`) | montar a fila de cada pasta | sim |
+| Fotos e vídeos (`READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO`; `READ_EXTERNAL_STORAGE` no Android 12) | montar a fila de cada pasta | sim, com acesso total |
 | Gerenciamento de mídia (`MANAGE_MEDIA`) | mandar pra lixeira e favoritar sem diálogo do sistema | recomendada |
 
-Sem a segunda, o app funciona, mas o Android pede confirmação a cada envio para a lixeira.
+O "acesso limitado" do Android 14+ (escolher algumas fotos) não basta: o app precisa ver a pasta inteira, e avisa quando é esse o caso. Sem a segunda permissão, o app funciona, mas o Android pede confirmação a cada envio para a lixeira.
 
 ## Compilando
 

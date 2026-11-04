@@ -1,5 +1,6 @@
 package app.exinder.ui.permissions
 
+import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
@@ -28,6 +29,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -37,7 +42,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.exinder.hasMediaPermission
+import app.exinder.hasPartialMediaAccess
 import app.exinder.mediaPermissions
+import androidx.core.app.ActivityCompat
 import app.exinder.ui.theme.Brat
 import app.exinder.ui.theme.ExinderLogo
 import app.exinder.ui.theme.Ink
@@ -57,9 +65,24 @@ fun PermissionsScreen(
     onSkipManage: () -> Unit,
 ) {
     val context = LocalContext.current
+
+    // Depois de duas recusas, o Android para de mostrar o diálogo e o pedido
+    // volta negado na hora. Nesse caso o botão leva às configurações do app.
+    var blocked by rememberSaveable { mutableStateOf(false) }
     val requestMedia = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
-    ) { onRecheck() }
+    ) {
+        onRecheck()
+        val activity = context as? Activity
+        blocked = !hasMediaPermission(context) && !hasPartialMediaAccess(context) && activity != null &&
+            !ActivityCompat.shouldShowRequestPermissionRationale(activity, mediaPermissions().first())
+    }
+    val partial = !hasMedia && hasPartialMediaAccess(context)
+    val openAppSettings = {
+        context.startActivity(
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")),
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -82,10 +105,15 @@ fun PermissionsScreen(
         PermissionStep(
             icon = Icons.Rounded.PhotoLibrary,
             title = "fotos e vídeos",
-            description = "pra montar a fila de cada pasta",
+            description = when {
+                // "Acesso limitado": dá pra trocar por "permitir tudo" pedindo de novo.
+                partial -> "você liberou só algumas fotos; o app precisa ver a pasta inteira"
+                blocked -> "negada. libere em permissões > fotos e vídeos > permitir tudo"
+                else -> "pra montar a fila de cada pasta"
+            },
             granted = hasMedia,
-            action = "permitir",
-            onAction = { requestMedia.launch(mediaPermissions()) },
+            action = if (blocked && !partial) "abrir ajustes" else "permitir",
+            onAction = { if (blocked && !partial) openAppSettings() else requestMedia.launch(mediaPermissions()) },
         )
         Spacer(Modifier.height(12.dp))
         PermissionStep(

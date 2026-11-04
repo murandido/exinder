@@ -134,8 +134,8 @@ private fun ExinderRoot(container: AppContainer) {
     }
 }
 
-/** Permissões de leitura de mídia, que mudaram de nome no Android 13. */
-fun mediaPermissions(): Array<String> =
+/** Permissões de leitura que, juntas, dão acesso total. Mudaram de nome no Android 13. */
+private fun fullAccessPermissions(): Array<String> =
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO)
     } else {
@@ -143,10 +143,28 @@ fun mediaPermissions(): Array<String> =
     }
 
 /**
- * `true` só com acesso total. O "acesso parcial" do Android 14 (escolher
+ * O que pedir ao sistema. No Android 14+ inclui a permissão do "acesso
+ * limitado", para o diálogo funcionar no modo normal (ver o manifesto).
+ */
+fun mediaPermissions(): Array<String> =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        fullAccessPermissions() + Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED
+    } else {
+        fullAccessPermissions()
+    }
+
+private fun granted(context: Context, permission: String): Boolean =
+    ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+
+/**
+ * `true` só com acesso total. O "acesso limitado" do Android 14 (escolher
  * algumas fotos) não serve: o app precisa ver a pasta inteira.
  */
 fun hasMediaPermission(context: Context): Boolean =
-    mediaPermissions().all {
-        ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
-    }
+    fullAccessPermissions().all { granted(context, it) }
+
+/** O usuário escolheu "acesso limitado": o app só veria as fotos selecionadas. */
+fun hasPartialMediaAccess(context: Context): Boolean =
+    Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+        !hasMediaPermission(context) &&
+        granted(context, Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED)

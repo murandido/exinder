@@ -8,6 +8,13 @@
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <!--
+        Declarada para o Android 14+ saber lidar com o "acesso limitado"
+        (escolher algumas fotos). Sem ela, o sistema entra num modo de
+        compatibilidade em que o app parece ter acesso total mas só vê as
+        fotos escolhidas. O app detecta esse caso e pede o acesso total.
+    -->
+    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
 
     <!--
         "Gerenciamento de mídia": deixa o app mandar arquivos para a lixeira e
