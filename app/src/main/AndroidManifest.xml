@@ -17,6 +17,19 @@
     <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
 
     <!--
+        Media3 adds these two, for network streaming and keeping the screen on
+        during playback. The app only plays local files and never uses them;
+        removing them keeps the permission list honest. (Without
+        ACCESS_NETWORK_STATE, Media3 just reports the network type as unknown.)
+    -->
+    <uses-permission
+        android:name="android.permission.ACCESS_NETWORK_STATE"
+        tools:node="remove" />
+    <uses-permission
+        android:name="android.permission.WAKE_LOCK"
+        tools:node="remove" />
+
+    <!--
         "Media management": lets the app send files to the trash and mark
         favorites without Android asking for confirmation on every file.
         The user grants it once, in the system settings.
