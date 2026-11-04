@@ -40,8 +40,12 @@ interface DecisionDao {
     @Query("SELECT * FROM decision WHERE folderKey = :folderKey")
     suspend fun forFolder(folderKey: String): List<Decision>
 
-    /** Arquivos com decisão "viva" (os que estão na lixeira já não aparecem nas listas). */
-    @Query("SELECT uri FROM decision WHERE status != 'NA_LIXEIRA'")
+    /**
+     * Arquivos já revisados de vez: mantidos ou favoritos. Os marcados para a
+     * lixeira que ainda não foram contam como "pra revisar", para a pasta não
+     * aparecer como concluída com arquivos esperando o "mandar agora".
+     */
+    @Query("SELECT uri FROM decision WHERE status IN ('MANTER', 'FAVORITO')")
     suspend fun decidedUris(): List<String>
 
     @Upsert
