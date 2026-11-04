@@ -48,13 +48,15 @@ object SystemRequests {
      * request as denied here would make the app record the opposite of what the
      * user answered in the dialog.
      *
-     * If the Activity is finishing for good, the request is treated as denied.
+     * The same goes for the system destroying the Activity without finishing it
+     * (low memory, "Don't keep activities"): it comes back and gets the result.
+     * Only an Activity finishing for good treats the request as denied.
      */
     fun detach(activity: ComponentActivity) {
         if (owner !== activity) return
         owner = null
         launcher = null
-        if (!activity.isChangingConfigurations) {
+        if (activity.isFinishing) {
             pending?.complete(false)
             pending = null
         }
