@@ -446,13 +446,13 @@ private fun PendingRow(ui: SwipeUi, vm: SwipeViewModel) {
     ) {
         ui.pending.takeLast(TRASH_DELAY).forEach { index ->
             val file = ui.items[index]
-            // Quantas decisões faltam para ele ir: o cursor precisa passar de index + TRASH_DELAY.
-            val left = index + TRASH_DELAY + 1 - ui.cursor
+            val left = ui.trashIn(index)
             Row(
                 Modifier
                     .clip(RoundedCornerShape(50))
                     .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .clickable { vm.rewindTo(index) }
+                    // Travado enquanto um card voa para fora (ver `busy` no Deck).
+                    .clickable(enabled = enabled) { onRewindTo(index) }
                     .padding(start = 4.dp, top = 4.dp, bottom = 4.dp, end = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {

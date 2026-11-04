@@ -69,6 +69,22 @@ data class SwipeUi(
         get() = (0 until cursor.coerceAtMost(items.size))
             .filter { statusOf(items[it]) == Status.LIXEIRA_PENDENTE }
 
+    /**
+     * Quantas decisões já foram tomadas depois do arquivo [index]: conta os
+     * arquivos entre ele e o cursor que têm decisão ativa. Os que já estão na
+     * lixeira não contam, porque foram decididos antes (o cursor pula por cima
+     * deles depois de um rebobinar). Contar por posição daria a um arquivo
+     * zero de prazo nesse caso.
+     */
+    fun decisionsAfter(index: Int): Int =
+        (index + 1 until cursor.coerceAtMost(items.size)).count {
+            val s = statusOf(items[it])
+            s != null && s != Status.NA_LIXEIRA
+        }
+
+    /** Quantas decisões faltam para o arquivo [index] ir para a lixeira. */
+    fun trashIn(index: Int): Int = (TRASH_DELAY - decisionsAfter(index)).coerceAtLeast(0)
+
     /** Dá para voltar enquanto existir algo atrás que não foi para a lixeira. */
     val canRewind: Boolean
         get() = (0 until cursor.coerceAtMost(items.size))
@@ -235,7 +251,7 @@ class SwipeViewModel(
     private fun commitDue() {
         val ui = _ui.value
         val due = ui.pending
-            .filter { it < ui.cursor - TRASH_DELAY }
+            .filter { ui.decisionsAfter(it) >= TRASH_DELAY }
             .map { ui.items[it] }
         sendToTrash(due)
     }
