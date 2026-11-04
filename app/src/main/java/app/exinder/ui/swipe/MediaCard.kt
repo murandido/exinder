@@ -51,8 +51,10 @@ val CardShape = RoundedCornerShape(8.dp)
  * data e detalhes (o "nome, idade" do Tinder) e o ícone do tipo de arquivo.
  *
  * @param isTop o card de cima, o único com os carimbos.
- * @param playVideo se o vídeo toca; quando não, fica o primeiro quadro parado.
- *   Só o card de cima toca, e nem ele enquanto a tela cheia está aberta.
+ * @param playVideo se o vídeo toca. Só o card de cima toca, e nem ele
+ *   enquanto a tela cheia está aberta.
+ * @param prepareVideo cria o player mesmo sem tocar, parado no primeiro quadro
+ *   (o card de trás, pré-carregado para começar sem espera).
  * @param stamps opacidade de cada carimbo (MANTÉM, APAGA, FAVORITA), lida a
  *   cada frame durante o arrasto.
  */
@@ -61,11 +63,12 @@ fun MediaCard(
     file: MediaFile,
     isTop: Boolean,
     playVideo: Boolean,
+    prepareVideo: Boolean,
     stamps: () -> Stamps,
     modifier: Modifier = Modifier,
 ) {
     Box(modifier.background(Color.Black)) {
-        CardMedia(file, playVideo)
+        CardMedia(file, playVideo, prepareVideo)
 
         // Degradê que dá leitura ao texto sobre qualquer foto.
         Box(
@@ -125,7 +128,7 @@ data class Stamps(val keep: Float, val trash: Float, val favorite: Float)
 
 /** Foto, GIF ou vídeo, com um aviso no lugar se o arquivo não abrir. */
 @Composable
-private fun CardMedia(file: MediaFile, playVideo: Boolean) {
+private fun CardMedia(file: MediaFile, playVideo: Boolean, prepareVideo: Boolean) {
     // A imagem fica sempre por baixo: para vídeo ela é o primeiro quadro,
     // que aparece enquanto o player ainda está carregando.
     SubcomposeAsyncImage(
@@ -151,8 +154,8 @@ private fun CardMedia(file: MediaFile, playVideo: Boolean) {
             }
         },
     )
-    if (file.kind == MediaKind.VIDEO && playVideo) {
-        LoopingVideo(file.uri, Modifier.fillMaxSize())
+    if (file.kind == MediaKind.VIDEO && (playVideo || prepareVideo)) {
+        LoopingVideo(file.uri, Modifier.fillMaxSize(), playing = playVideo)
     }
 }
 

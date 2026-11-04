@@ -95,7 +95,9 @@ import app.exinder.ui.theme.StarBlue
 import app.exinder.ui.viewer.FullscreenViewer
 import app.exinder.util.formatBytes
 import app.exinder.util.formatCount
+import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -370,6 +372,17 @@ private fun ColumnScope.Deck(
         }
     }
 
+    // Pré-carrega a imagem do terceiro card (o de trás já está na tela), no
+    // mesmo tamanho dos cards, para ela sair do cache de memória sem espera.
+    val context = LocalContext.current
+    val third = ui.afterNext
+    LaunchedEffect(third?.key, area) {
+        if (third == null || area == IntSize.Zero) return@LaunchedEffect
+        SingletonImageLoader.get(context).enqueue(
+            ImageRequest.Builder(context).data(third.uri).size(area.width, area.height).build(),
+        )
+    }
+
     // Vibração curta ao cruzar o limiar de uma decisão.
     val zone by remember(top.key) { derivedStateOf { zoneOf(motion.x.value, motion.y.value, area) } }
     LaunchedEffect(zone) {
@@ -429,6 +442,8 @@ private fun ColumnScope.Deck(
                     file = file,
                     isTop = isTop,
                     playVideo = isTop && !videoPaused,
+                    // Os dois cards da pilha ficam com o player pronto.
+                    prepareVideo = true,
                     stamps = { Stamps(progress(Dir.RIGHT), progress(Dir.LEFT), progress(Dir.UP)) },
                     modifier = Modifier
                         .fillMaxSize()

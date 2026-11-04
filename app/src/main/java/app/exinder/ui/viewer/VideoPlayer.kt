@@ -26,10 +26,18 @@ import app.exinder.R
  *
  * O player é criado quando o composable entra na tela e liberado quando sai,
  * e pausa sozinho quando o app vai para o fundo.
+ *
+ * @param playing `false` deixa o player preparado e parado no primeiro quadro.
+ *   Usado no card de trás: quando ele vira o da frente, o vídeo já começa na hora.
  */
 @OptIn(UnstableApi::class)
 @Composable
-fun LoopingVideo(uri: Uri, modifier: Modifier = Modifier, controls: Boolean = false) {
+fun LoopingVideo(
+    uri: Uri,
+    modifier: Modifier = Modifier,
+    controls: Boolean = false,
+    playing: Boolean = true,
+) {
     val context = LocalContext.current
 
     val player = remember(uri) {
@@ -37,15 +45,15 @@ fun LoopingVideo(uri: Uri, modifier: Modifier = Modifier, controls: Boolean = fa
             setMediaItem(MediaItem.fromUri(uri))
             repeatMode = Player.REPEAT_MODE_ONE
             volume = if (controls) 1f else 0f
-            playWhenReady = true
+            playWhenReady = playing
             prepare()
         }
     }
     DisposableEffect(player) {
         onDispose { player.release() }
     }
-    LifecycleStartEffect(player) {
-        player.play()
+    LifecycleStartEffect(player, playing) {
+        if (playing) player.play() else player.pause()
         onStopOrDispose { player.pause() }
     }
 

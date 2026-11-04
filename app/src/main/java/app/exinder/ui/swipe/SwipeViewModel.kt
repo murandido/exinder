@@ -64,6 +64,10 @@ data class SwipeUi(
     /** O card que aparece logo atrás. */
     val next: MediaFile? get() = nextUndecided(cursor + 1)?.let(items::get)
 
+    /** O card depois do de trás, que ainda não está na tela (é pré-carregado). */
+    val afterNext: MediaFile?
+        get() = nextUndecided(cursor + 1)?.let { nextUndecided(it + 1) }?.let(items::get)
+
     /** Índices dos arquivos no buffer, esperando a vez de ir para a lixeira. */
     val pending: List<Int>
         get() = (0 until cursor.coerceAtMost(items.size))
