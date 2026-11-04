@@ -61,6 +61,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -118,6 +119,7 @@ import coil3.size.Scale
 import kotlin.math.abs
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 // ─── Swipe physics ──────────────────────────────────────────────────────────
@@ -372,10 +374,13 @@ private fun ColumnScope.Deck(ui: SwipeUi, vm: SwipeViewModel, videoPaused: Boole
     LaunchedEffect(top.key) {
         val from = ui.enterFrom ?: return@LaunchedEffect
         vm.consumeEnter()
+        // A freshly shown stack (coming back from the summary) hasn't been
+        // measured yet; wait for its size so the card has somewhere to come from.
+        val size = snapshotFlow { area }.first { it != IntSize.Zero }
         when (from) {
-            Dir.LEFT -> motion.x.snapTo(-area.width * 1.5f)
-            Dir.RIGHT -> motion.x.snapTo(area.width * 1.5f)
-            Dir.UP -> motion.y.snapTo(-area.height * 1.5f)
+            Dir.LEFT -> motion.x.snapTo(-size.width * 1.5f)
+            Dir.RIGHT -> motion.x.snapTo(size.width * 1.5f)
+            Dir.UP -> motion.y.snapTo(-size.height * 1.5f)
         }
         entering = true
         try {
@@ -399,7 +404,8 @@ private fun ColumnScope.Deck(ui: SwipeUi, vm: SwipeViewModel, videoPaused: Boole
     val ghostAlpha = remember { Animatable(0f) }
     LaunchedEffect(ui.passedTrash) {
         val passed = ui.passedTrash
-        if (passed.isEmpty() || area == IntSize.Zero) return@LaunchedEffect
+        if (passed.isEmpty()) return@LaunchedEffect
+        snapshotFlow { area }.first { it != IntSize.Zero }
         // The list is only cleared at the end: clearing it changes this effect's key,
         // which would cancel the animation midway. A new rewind during the animation
         // restarts the effect with the accumulated list, and the `finally` keeps a
@@ -467,7 +473,11 @@ private fun ColumnScope.Deck(ui: SwipeUi, vm: SwipeViewModel, videoPaused: Boole
     }
 
     // Short vibration when crossing a decision threshold.
-    val zone by remember(top.key) { derivedStateOf { zoneOf(motion.x.value, motion.y.value, area) } }
+    // Not while a rewound card flies back in: it starts past a threshold, which
+    // would buzz as if the user had dragged it there.
+    val zone by remember(top.key) {
+        derivedStateOf { if (entering) null else zoneOf(motion.x.value, motion.y.value, area) }
+    }
     LaunchedEffect(zone) {
         if (zone != null) haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
     }
@@ -821,7 +831,6 @@ private data class Ghost(val file: MediaFile, val more: Int)
 private fun TrashedGhost(file: MediaFile, more: Int, modifier: Modifier = Modifier) {
     Box(
         modifier
-            .padding(horizontal = 8.dp, vertical = 6.dp)
             .clip(CardShape)
             .background(Color(0xFF2A2C31)),
         contentAlignment = Alignment.Center,
