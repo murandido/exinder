@@ -49,7 +49,9 @@ val CardShape = RoundedCornerShape(8.dp)
  * Conteúdo de um card: a mídia ocupando tudo, o degradê escuro na base com
  * data e detalhes (o "nome, idade" do Tinder) e o ícone do tipo de arquivo.
  *
- * @param isTop só o card de cima toca vídeo; o de trás mostra um quadro parado.
+ * @param isTop o card de cima, o único com os carimbos.
+ * @param playVideo se o vídeo toca; quando não, fica o primeiro quadro parado.
+ *   Só o card de cima toca, e nem ele enquanto a tela cheia está aberta.
  * @param stamps opacidade de cada carimbo (MANTÉM, APAGA, FAVORITA), lida a
  *   cada frame durante o arrasto.
  */
@@ -57,11 +59,12 @@ val CardShape = RoundedCornerShape(8.dp)
 fun MediaCard(
     file: MediaFile,
     isTop: Boolean,
+    playVideo: Boolean,
     stamps: () -> Stamps,
     modifier: Modifier = Modifier,
 ) {
     Box(modifier.background(Color.Black)) {
-        CardMedia(file, isTop)
+        CardMedia(file, playVideo)
 
         // Degradê que dá leitura ao texto sobre qualquer foto.
         Box(
@@ -121,7 +124,7 @@ data class Stamps(val keep: Float, val trash: Float, val favorite: Float)
 
 /** Foto, GIF ou vídeo, com um aviso no lugar se o arquivo não abrir. */
 @Composable
-private fun CardMedia(file: MediaFile, isTop: Boolean) {
+private fun CardMedia(file: MediaFile, playVideo: Boolean) {
     // A imagem fica sempre por baixo: para vídeo ela é o primeiro quadro,
     // que aparece enquanto o player ainda está carregando.
     SubcomposeAsyncImage(
@@ -147,7 +150,7 @@ private fun CardMedia(file: MediaFile, isTop: Boolean) {
             }
         },
     )
-    if (file.kind == MediaKind.VIDEO && isTop) {
+    if (file.kind == MediaKind.VIDEO && playVideo) {
         LoopingVideo(file.uri, Modifier.fillMaxSize())
     }
 }

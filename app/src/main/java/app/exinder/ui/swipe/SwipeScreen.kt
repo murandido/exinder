@@ -188,7 +188,9 @@ fun SwipeScreen(
 
             ui.current == null -> Summary(ui, trash, vm, onChangeFolder)
 
-            else -> Deck(ui, vm, onOpen = { fullscreen = it })
+            // Com a tela cheia aberta, o vídeo do card para: senão seriam dois
+            // players decodificando o mesmo arquivo ao mesmo tempo.
+            else -> Deck(ui, vm, videoPaused = fullscreen != null, onOpen = { fullscreen = it })
         }
     }
 
@@ -287,7 +289,12 @@ private fun CounterRow(ui: SwipeUi, trash: TrashStats) {
  * coordenadas do dedo não mudarem junto com o card.
  */
 @Composable
-private fun ColumnScope.Deck(ui: SwipeUi, vm: SwipeViewModel, onOpen: (MediaFile) -> Unit) {
+private fun ColumnScope.Deck(
+    ui: SwipeUi,
+    vm: SwipeViewModel,
+    videoPaused: Boolean,
+    onOpen: (MediaFile) -> Unit,
+) {
     val top = ui.current ?: return
     val next = ui.next
     val scope = rememberCoroutineScope()
@@ -397,6 +404,7 @@ private fun ColumnScope.Deck(ui: SwipeUi, vm: SwipeViewModel, onOpen: (MediaFile
                 MediaCard(
                     file = file,
                     isTop = isTop,
+                    playVideo = isTop && !videoPaused,
                     stamps = { Stamps(progress(Dir.RIGHT), progress(Dir.LEFT), progress(Dir.UP)) },
                     modifier = Modifier
                         .fillMaxSize()
