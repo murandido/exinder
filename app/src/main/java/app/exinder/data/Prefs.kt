@@ -2,7 +2,9 @@ package app.exinder.data
 
 import android.content.Context
 import androidx.annotation.StringRes
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -10,7 +12,13 @@ import app.exinder.R
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-private val Context.dataStore by preferencesDataStore(name = "prefs")
+// A corrupted preferences file (flash wear, interrupted write) is replaced with
+// empty preferences instead of crashing on every launch: everything stored here
+// is disposable (last folder, theme, one skipped permission).
+private val Context.dataStore by preferencesDataStore(
+    name = "prefs",
+    corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },
+)
 
 /** Theme chosen in the menu. [SISTEMA] follows Android's light/dark mode. */
 enum class ThemeMode(@StringRes val label: Int) {
