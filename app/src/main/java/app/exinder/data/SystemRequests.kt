@@ -13,11 +13,11 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
- * Ponte entre o código que roda em segundo plano e os pedidos do sistema
- * (lixeira e favorito), que só uma Activity consegue disparar.
+ * Bridge between code running in the background and system requests
+ * (trash and favorite), which only an Activity can launch.
  *
- * A Activity se registra em [attach]; a partir daí qualquer coroutine pode
- * chamar [run] e esperar o resultado como uma função `suspend` comum.
+ * The Activity registers itself in [attach]; from then on any coroutine can
+ * call [run] and await the result like a regular `suspend` function.
  */
 object SystemRequests {
 
@@ -25,10 +25,10 @@ object SystemRequests {
     private var launcher: ActivityResultLauncher<IntentSenderRequest>? = null
     private var pending: CompletableDeferred<Boolean>? = null
 
-    /** Um pedido de cada vez: o Android não empilha esses intents. */
+    /** One request at a time: Android doesn't queue these intents. */
     private val mutex = Mutex()
 
-    /** Chamado no `onCreate` da Activity, antes dela ficar visível. */
+    /** Called from the Activity's `onCreate`, before it becomes visible. */
     fun attach(activity: ComponentActivity) {
         owner = activity
         launcher = activity.registerForActivityResult(
@@ -40,15 +40,15 @@ object SystemRequests {
     }
 
     /**
-     * Chamado no `onDestroy`.
+     * Called from `onDestroy`.
      *
-     * Se a Activity está só sendo recriada (troca de tema claro/escuro, de
-     * idioma...), um pedido em andamento continua esperando: o Android entrega
-     * a resposta ao launcher que a nova Activity registra em [attach]. Dar o
-     * pedido como recusado aqui faria o app registrar o contrário do que o
-     * usuário respondeu no diálogo.
+     * If the Activity is only being recreated (light/dark theme change, language
+     * change...), a pending request keeps waiting: Android delivers the result
+     * to the launcher the new Activity registers in [attach]. Treating the
+     * request as denied here would make the app record the opposite of what the
+     * user answered in the dialog.
      *
-     * Se a Activity está fechando de vez, o pedido é dado como recusado.
+     * If the Activity is finishing for good, the request is treated as denied.
      */
     fun detach(activity: ComponentActivity) {
         if (owner !== activity) return
@@ -61,10 +61,10 @@ object SystemRequests {
     }
 
     /**
-     * Dispara o [request] e espera a resposta.
+     * Launches [request] and waits for the response.
      *
-     * @return `true` se o sistema aplicou o pedido; `false` se o usuário
-     *   recusou ou se não havia Activity para dispará-lo.
+     * @return `true` if the system applied the request; `false` if the user
+     *   declined or there was no Activity to launch it.
      */
     suspend fun run(request: PendingIntent): Boolean = mutex.withLock {
         val deferred = CompletableDeferred<Boolean>()

@@ -1,4 +1,4 @@
-# Finais de linha normalizados; scripts do Windows mantêm CRLF.
+# Normalized line endings; Windows scripts keep CRLF.
 * text=auto eol=lf
 *.bat text eol=crlf
 *.jar binary

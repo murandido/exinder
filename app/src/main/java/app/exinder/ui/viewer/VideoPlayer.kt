@@ -19,16 +19,16 @@ import androidx.media3.ui.PlayerView
 import app.exinder.R
 
 /**
- * Vídeo tocando em loop.
+ * Video playing in a loop.
  *
- * - No card: sem som, sem controles, preenchendo o card ([controls] = false).
- * - Na tela cheia: com som, com controles, inteiro na tela ([controls] = true).
+ * - On a card: muted, no controls, filling the card ([controls] = false).
+ * - Fullscreen: with sound and controls, fitted to the screen ([controls] = true).
  *
- * O player é criado quando o composable entra na tela e liberado quando sai,
- * e pausa sozinho quando o app vai para o fundo.
+ * The player is created when the composable enters the screen and released when
+ * it leaves, and it pauses on its own when the app goes to the background.
  *
- * @param playing `false` deixa o player preparado e parado no primeiro quadro.
- *   Usado no card de trás: quando ele vira o da frente, o vídeo já começa na hora.
+ * @param playing `false` keeps the player prepared and paused on the first frame.
+ *   Used on the back card: when it becomes the front one, the video starts instantly.
  */
 @OptIn(UnstableApi::class)
 @Composable
@@ -60,8 +60,8 @@ fun LoopingVideo(
     AndroidView(
         modifier = modifier,
         factory = { ctx ->
-            // Inflado do XML porque o tipo de superfície (TextureView) só é
-            // configurável por atributo de layout.
+            // Inflated from XML because the surface type (TextureView) can only be
+            // set through a layout attribute.
             (LayoutInflater.from(ctx).inflate(R.layout.player_view, null) as PlayerView).apply {
                 useController = controls
                 resizeMode = if (controls) {

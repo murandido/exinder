@@ -51,11 +51,11 @@ import app.exinder.ui.theme.ExinderLogo
 import app.exinder.ui.theme.Ink
 
 /**
- * Primeira tela: pede as duas permissões que o app precisa.
+ * First screen: requests the two permissions the app needs.
  *
- * 1. **Fotos e vídeos**: obrigatória, sem ela não há o que revisar.
- * 2. **Gerenciamento de mídia**: recomendada. Sem ela, o Android pergunta
- *    "mover para a lixeira?" a cada arquivo, o que acaba com o ritmo do swipe.
+ * 1. **Photos and videos**: required; without it there is nothing to review.
+ * 2. **Media management**: recommended. Without it, Android asks
+ *    "move to trash?" for every file, which kills the swipe rhythm.
  */
 @Composable
 fun PermissionsScreen(
@@ -66,8 +66,8 @@ fun PermissionsScreen(
 ) {
     val context = LocalContext.current
 
-    // Depois de duas recusas, o Android para de mostrar o diálogo e o pedido
-    // volta negado na hora. Nesse caso o botão leva às configurações do app.
+    // After two denials, Android stops showing the dialog and the request comes
+    // back denied immediately. In that case the button opens the app's settings.
     var blocked by rememberSaveable { mutableStateOf(false) }
     val requestMedia = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
@@ -106,7 +106,7 @@ fun PermissionsScreen(
             icon = Icons.Rounded.PhotoLibrary,
             title = "fotos e vídeos",
             description = when {
-                // "Acesso limitado": dá pra trocar por "permitir tudo" pedindo de novo.
+                // "Limited access": requesting again lets the user switch to "allow all".
                 partial -> "você liberou só algumas fotos; o app precisa ver a pasta inteira"
                 blocked -> "negada. libere em permissões > fotos e vídeos > permitir tudo"
                 else -> "pra montar a fila de cada pasta"
@@ -132,7 +132,7 @@ fun PermissionsScreen(
             },
         )
 
-        // A segunda permissão é opcional, mas só depois da primeira.
+        // The second permission is optional, and only offered after the first.
         if (hasMedia && !canManage) {
             Spacer(Modifier.height(16.dp))
             TextButton(onClick = onSkipManage) {
@@ -142,7 +142,7 @@ fun PermissionsScreen(
     }
 }
 
-/** Um cartão com a explicação de uma permissão e o botão que a pede. */
+/** A card explaining a permission, with the button that requests it. */
 @Composable
 private fun PermissionStep(
     icon: ImageVector,

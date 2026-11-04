@@ -22,27 +22,27 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-// ─── Paleta ─────────────────────────────────────────────────────────────────
-// O layout é o do Tinder; a cor da marca troca o rosa/laranja pelo verde brat.
-// Vermelho, azul e amarelo dos botões ficam iguais aos do Tinder para que cada
-// ação seja reconhecida na hora.
+// ─── Palette ────────────────────────────────────────────────────────────────
+// The layout is Tinder's; the brand color swaps the pink/orange for brat green.
+// The red, blue and yellow buttons match Tinder's so each action is
+// recognized instantly.
 
-/** Verde brat: logo, botão manter, carimbo MANTÉM. */
+/** Brat green: logo, keep button, MANTÉM (KEEP) stamp. */
 val Brat = Color(0xFF8ACE00)
 
-/** Ponta clara do gradiente da marca. */
+/** Light end of the brand gradient. */
 val BratLight = Color(0xFFB9F227)
 
-/** Texto sobre o verde. */
+/** Text on top of the green. */
 val Ink = Color(0xFF000000)
 
-/** Botão X e carimbo APAGA. */
+/** X button and APAGA (DELETE) stamp. */
 val Nope = Color(0xFFFF4458)
 
-/** Botão estrela e carimbo FAVORITA. */
+/** Star button and FAVORITA (FAVORITE) stamp. */
 val StarBlue = Color(0xFF2DB3FF)
 
-/** Botão rebobinar. */
+/** Rewind button. */
 val RewindGold = Color(0xFFF5B748)
 
 private val DarkSurface = Color(0xFF111111)
@@ -78,18 +78,18 @@ private val DarkColors = darkColorScheme(
 )
 
 /**
- * Fonte condensada do sistema, a mais próxima da Arial Narrow da capa do
- * *brat* sem embutir arquivo de fonte no app.
+ * The system's condensed font, the closest to the Arial Narrow on the *brat*
+ * cover without bundling a font file in the app.
  */
 val Condensed: FontFamily = FontFamily(Typeface.create("sans-serif-condensed", Typeface.NORMAL))
 
 /**
- * Tema do app. Segue o modo claro/escuro do sistema.
+ * App theme. Follows the system's light/dark mode.
  *
- * As telas pintam o fundo com `Modifier.background` em vez de `Surface`, então
- * a cor padrão do texto é definida aqui; sem isso ela ficaria preta no modo escuro.
+ * Screens paint their background with `Modifier.background` instead of `Surface`,
+ * so the default text color is set here; otherwise it would be black in dark mode.
  *
- * @param dark escuro ou claro; por padrão segue o sistema.
+ * @param dark dark or light; follows the system by default.
  */
 @Composable
 fun ExinderTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
@@ -100,15 +100,15 @@ fun ExinderTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () 
 }
 
 /**
- * O logo "exinder", como a capa do *brat*: texto preto, minúsculo, condensado
- * e levemente desfocado, sobre um bloco verde.
+ * The "exinder" logo, styled like the *brat* cover: black, lowercase, condensed,
+ * slightly blurred text on a green block.
  */
 @Composable
 fun ExinderLogo(modifier: Modifier = Modifier, size: TextUnit = 30.sp) {
     Box(
         modifier
             .background(Brat)
-            // Respiro proporcional ao tamanho do texto, igual em todos os tamanhos.
+            // Padding proportional to the text size, so it looks the same at every size.
             .padding(horizontal = (size.value * 0.28f).dp, vertical = (size.value * 0.04f).dp),
     ) {
         Text(

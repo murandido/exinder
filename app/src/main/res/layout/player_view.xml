@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    PlayerView com TextureView em vez de SurfaceView.
-    Só a TextureView acompanha a rotação, o arrasto e o recorte arredondado do
-    card; uma SurfaceView ficaria "parada" atrás dele.
+    PlayerView with a TextureView instead of a SurfaceView.
+    Only a TextureView follows the card's rotation, drag and rounded
+    clipping; a SurfaceView would stay "stuck" behind it.
 -->
 <androidx.media3.ui.PlayerView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"

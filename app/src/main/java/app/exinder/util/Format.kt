@@ -5,15 +5,15 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/** Formatação de datas, tamanhos e números no jeito brasileiro. */
+/** Date, size and number formatting, Brazilian style. */
 
 private val ptBR: Locale = Locale.forLanguageTag("pt-BR")
 
-/** `14 mar 2019`: a linha grande do card, o "nome, idade" do Tinder. */
+/** `14 mar 2019`: the card's big line, Tinder's "name, age". */
 fun formatDate(ms: Long): String =
     SimpleDateFormat("d MMM yyyy", ptBR).format(Date(ms)).replace(".", "")
 
-/** `14 mar 2019, 15:32`: usado na tela cheia. */
+/** `14 mar 2019, 15:32`: used in the fullscreen viewer. */
 fun formatDateTime(ms: Long): String =
     SimpleDateFormat("d MMM yyyy, HH:mm", ptBR).format(Date(ms)).replace(".", "")
 
@@ -22,8 +22,8 @@ fun formatBytes(bytes: Long): String {
     val kb = 1024.0
     val mb = kb * 1024
     val gb = mb * 1024
-    // Os limites ficam um pouco abaixo da unidade seguinte, para o arredondamento
-    // não produzir "1024 KB" ou "1024,0 MB" em vez de "1,0 MB" ou "1,0 GB".
+    // The thresholds sit slightly below the next unit, so rounding doesn't
+    // produce "1024 KB" or "1024,0 MB" instead of "1,0 MB" or "1,0 GB".
     return when {
         bytes < kb -> "$bytes B"
         bytes < mb - kb / 2 -> String.format(ptBR, "%.0f KB", bytes / kb)

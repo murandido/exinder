@@ -43,20 +43,20 @@ import app.exinder.util.formatDate
 import app.exinder.util.formatDuration
 import coil3.compose.SubcomposeAsyncImage
 
-/** Cantos do card, iguais em todas as camadas para o recorte bater. */
+/** Card corners, the same on every layer so the clipping lines up. */
 val CardShape = RoundedCornerShape(8.dp)
 
 /**
- * Conteúdo de um card: a mídia ocupando tudo, o degradê escuro na base com
- * data e detalhes (o "nome, idade" do Tinder) e o ícone do tipo de arquivo.
+ * Card content: the media filling the whole card, a dark gradient at the bottom
+ * with date and details (Tinder's "name, age") and the file type icon.
  *
- * @param isTop o card de cima, o único com os carimbos.
- * @param playVideo se o vídeo toca. Só o card de cima toca, e nem ele
- *   enquanto a tela cheia está aberta.
- * @param prepareVideo cria o player mesmo sem tocar, parado no primeiro quadro
- *   (o card de trás, pré-carregado para começar sem espera).
- * @param stamps opacidade de cada carimbo (MANTÉM, APAGA, FAVORITA), lida a
- *   cada frame durante o arrasto.
+ * @param isTop the top card, the only one with stamps.
+ * @param playVideo whether the video plays. Only the top card plays, and not
+ *   even that one while the fullscreen viewer is open.
+ * @param prepareVideo creates the player even when not playing, paused on the
+ *   first frame (the back card, preloaded so it starts without delay).
+ * @param stamps opacity of each stamp (MANTÉM, APAGA, FAVORITA: keep, delete,
+ *   favorite), read every frame during the drag.
  */
 @Composable
 fun MediaCard(
@@ -70,7 +70,7 @@ fun MediaCard(
     Box(modifier.background(Color.Black)) {
         CardMedia(file, playVideo, prepareVideo)
 
-        // Degradê que dá leitura ao texto sobre qualquer foto.
+        // Gradient that keeps the text readable over any photo.
         Box(
             Modifier
                 .align(Alignment.BottomCenter)
@@ -123,14 +123,14 @@ fun MediaCard(
     }
 }
 
-/** Opacidade (0 a 1) de cada carimbo. */
+/** Opacity (0 to 1) of each stamp. */
 data class Stamps(val keep: Float, val trash: Float, val favorite: Float)
 
-/** Foto, GIF ou vídeo, com um aviso no lugar se o arquivo não abrir. */
+/** Photo, GIF or video, with a notice in its place if the file fails to open. */
 @Composable
 private fun CardMedia(file: MediaFile, playVideo: Boolean, prepareVideo: Boolean) {
-    // A imagem fica sempre por baixo: para vídeo ela é o primeiro quadro,
-    // que aparece enquanto o player ainda está carregando.
+    // The image always sits underneath: for videos it is the first frame,
+    // shown while the player is still loading.
     SubcomposeAsyncImage(
         model = file.uri,
         contentDescription = file.name,
@@ -159,7 +159,7 @@ private fun CardMedia(file: MediaFile, playVideo: Boolean, prepareVideo: Boolean
     }
 }
 
-/** Ícone redondo no canto dizendo se é foto, GIF ou vídeo. */
+/** Round corner icon showing whether it's a photo, GIF or video. */
 @Composable
 private fun KindBadge(kind: MediaKind, modifier: Modifier = Modifier) {
     val icon = when (kind) {
@@ -177,7 +177,7 @@ private fun KindBadge(kind: MediaKind, modifier: Modifier = Modifier) {
     }
 }
 
-/** Carimbo inclinado que aparece conforme o card é arrastado, como o LIKE / NOPE do Tinder. */
+/** Tilted stamp that appears as the card is dragged, like Tinder's LIKE / NOPE. */
 @Composable
 private fun Stamp(
     text: String,
@@ -194,7 +194,7 @@ private fun Stamp(
         fontFamily = Condensed,
         letterSpacing = 1.sp,
         modifier = modifier
-            // Invisível na maior parte do tempo: fora da leitura do TalkBack.
+            // Invisible most of the time: kept out of TalkBack.
             .clearAndSetSemantics { }
             .graphicsLayer {
                 this.alpha = alpha()

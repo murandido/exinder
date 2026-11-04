@@ -107,27 +107,27 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlin.math.abs
 
-// ─── Física do swipe ────────────────────────────────────────────────────────
+// ─── Swipe physics ──────────────────────────────────────────────────────────
 
-/** Fração da largura que o card precisa andar para a decisão valer. */
+/** Fraction of the width the card must travel for the decision to count. */
 private const val SWIPE_X = 0.30f
 
-/** Fração da altura para o swipe para cima (favoritar). */
+/** Fraction of the height for the up swipe (favorite). */
 private const val SWIPE_Y = 0.20f
 
-/** Velocidade (px/s) que conta como "jogar o card", mesmo sem chegar no limiar. */
+/** Velocity (px/s) that counts as "flinging the card", even short of the threshold. */
 private const val FLING_VELOCITY = 1800f
 
-/** Inclinação máxima do card, em graus, quando ele chega na borda da tela. */
+/** Maximum card tilt, in degrees, when it reaches the edge of the screen. */
 private const val MAX_ROTATION = 15f
 
-/** Posição do card de cima. Fica fora do card porque os botões também a leem. */
+/** Position of the top card. Lives outside the card because the buttons read it too. */
 private class CardMotion {
     val x = Animatable(0f)
     val y = Animatable(0f)
 }
 
-/** Direção em que a posição atual do card está apontando, sem contar velocidade. */
+/** Direction the card's current position points to, ignoring velocity. */
 private fun zoneOf(x: Float, y: Float, size: IntSize): Dir? {
     if (size == IntSize.Zero) return null
     return when {
@@ -138,7 +138,7 @@ private fun zoneOf(x: Float, y: Float, size: IntSize): Dir? {
     }
 }
 
-/** Decide no fim do arrasto: vale a posição ou, se o gesto foi rápido, a velocidade. */
+/** Decides at the end of the drag: by position or, if the gesture was fast, by velocity. */
 private fun releaseDir(x: Float, y: Float, vx: Float, vy: Float, size: IntSize): Dir? =
     zoneOf(x, y, size) ?: when {
         vy < -FLING_VELOCITY && abs(vy) > abs(vx) && y < 0 -> Dir.UP
@@ -147,11 +147,11 @@ private fun releaseDir(x: Float, y: Float, vx: Float, vy: Float, size: IntSize):
         else -> null
     }
 
-// ─── Tela ───────────────────────────────────────────────────────────────────
+// ─── Screen ─────────────────────────────────────────────────────────────────
 
 /**
- * A tela principal: topo com logo e contador, a pilha de cards, a fila da
- * lixeira e os botões redondos do Tinder.
+ * The main screen: header with logo and counter, the card stack, the trash
+ * queue and the Tinder-style round buttons.
  */
 @Composable
 fun SwipeScreen(
@@ -160,8 +160,8 @@ fun SwipeScreen(
     onChangeFolder: () -> Unit,
 ) {
     val vm: SwipeViewModel = viewModel(key = folder.key) { SwipeViewModel(container, folder) }
-    // Relê a pasta toda vez que ela é aberta: o ViewModel sobrevive entre uma
-    // visita e outra, e a pasta pode ter mudado por fora nesse meio-tempo.
+    // Reload the folder every time it is opened: the ViewModel survives between
+    // visits, and the folder may have changed elsewhere in the meantime.
     LaunchedEffect(vm) { vm.load() }
     val ui by vm.ui.collectAsStateWithLifecycle()
     val trash by vm.trashStats.collectAsStateWithLifecycle()
@@ -176,8 +176,8 @@ fun SwipeScreen(
         vm.messages.collect { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
     }
 
-    // Vibração curta quando um arquivo vai de fato para a lixeira, dois cards
-    // depois de marcado: o aviso de que aquele já não dá mais pra desfazer aqui.
+    // Short vibration when a file actually goes to the trash, two cards after
+    // being marked: the signal that it can no longer be undone here.
     val haptics = LocalHapticFeedback.current
     LaunchedEffect(vm) {
         vm.trashed.collect { haptics.performHapticFeedback(HapticFeedbackType.Reject) }
@@ -207,8 +207,8 @@ fun SwipeScreen(
 
             ui.current == null -> Summary(ui, trash, vm, onChangeFolder)
 
-            // Com a tela cheia aberta, o vídeo do card para: senão seriam dois
-            // players decodificando o mesmo arquivo ao mesmo tempo.
+            // While the fullscreen viewer is open, the card's video stops: otherwise two
+            // players would be decoding the same file at the same time.
             else -> Deck(ui, vm, videoPaused = fullscreen != null, onOpen = { fullscreen = it })
         }
     }
@@ -233,7 +233,7 @@ fun SwipeScreen(
     }
 }
 
-/** Logo à esquerda; nome da pasta e menu à direita. */
+/** Logo on the left; folder name and menu on the right. */
 @Composable
 private fun TopBar(
     folder: FolderRef,
@@ -280,8 +280,8 @@ private fun TopBar(
                         onReset()
                     },
                 )
-                // Um toque troca para o próximo: sistema → claro → escuro → sistema.
-                // O menu fica aberto, para ver o resultado e seguir trocando.
+                // Each tap switches to the next: system → light → dark → system.
+                // The menu stays open, so the user can see the result and keep switching.
                 DropdownMenuItem(
                     text = { Text("tema: ${theme.label}") },
                     onClick = { onTheme(ThemeMode.entries[(theme.ordinal + 1) % ThemeMode.entries.size]) },
@@ -291,7 +291,7 @@ private fun TopBar(
     }
 }
 
-/** `1.234 / 5.678` à esquerda, `2,3 GB liberados` à direita. */
+/** `1.234 / 5.678` on the left, `2,3 GB liberados` (freed) on the right. */
 @Composable
 private fun CounterRow(ui: SwipeUi, trash: TrashStats) {
     Row(
@@ -314,10 +314,10 @@ private fun CounterRow(ui: SwipeUi, trash: TrashStats) {
 }
 
 /**
- * A pilha de cards com os gestos, a fila da lixeira e os botões.
+ * The card stack with its gestures, the trash queue and the buttons.
  *
- * O arrasto é lido numa caixa fixa (e não no card que se move), para as
- * coordenadas do dedo não mudarem junto com o card.
+ * Drags are read on a fixed box (not on the moving card), so the finger's
+ * coordinates don't shift along with the card.
  */
 @Composable
 private fun ColumnScope.Deck(
@@ -333,13 +333,13 @@ private fun ColumnScope.Deck(
 
     var area by remember { mutableStateOf(IntSize.Zero) }
     val motion = remember(top.key) { CardMotion() }
-    // Trava os gestos enquanto o card voa para fora, contra toque duplo.
+    // Lock gestures while the card flies off, to guard against double taps.
     var busy by remember(top.key) { mutableStateOf(false) }
-    // Enquanto o card volta de um rebobinar, a mola passa um pouco do centro;
-    // sem isso, um card "mantido" piscaria o carimbo APAGA na volta.
+    // While a card returns from a rewind, the spring overshoots the center a bit;
+    // without this, a "kept" card would flash the APAGA (DELETE) stamp on its way back.
     var entering by remember(top.key) { mutableStateOf(false) }
 
-    // Depois de um rebobinar, o card volta animando pelo lado por onde saiu.
+    // After a rewind, the card animates back in from the side it left.
     LaunchedEffect(top.key) {
         val from = ui.enterFrom ?: return@LaunchedEffect
         vm.consumeEnter()
@@ -359,19 +359,19 @@ private fun ColumnScope.Deck(
         }
     }
 
-    // Rebobinar por cima de arquivos que já estão na lixeira: cada um passa
-    // como um card cinza, sem ação, antes do card de destino aparecer.
-    // Mostra no máximo 3; o último diz quantos mais foram pulados.
+    // Rewinding over files already in the trash: each one passes by as an
+    // inert gray card before the target card appears.
+    // Shows at most 3; the last one says how many more were skipped.
     var ghost by remember { mutableStateOf<Ghost?>(null) }
     val ghostX = remember { Animatable(0f) }
     val ghostAlpha = remember { Animatable(0f) }
     LaunchedEffect(ui.passedTrash) {
         val passed = ui.passedTrash
         if (passed.isEmpty() || area == IntSize.Zero) return@LaunchedEffect
-        // A lista só é limpa no fim: limpá-la muda a chave deste efeito, o que
-        // cancelaria a animação no meio. Um novo rebobinar durante a animação
-        // recomeça o efeito com a lista acumulada, e o `finally` não deixa um
-        // card cinza preso na tela.
+        // The list is only cleared at the end: clearing it changes this effect's key,
+        // which would cancel the animation midway. A new rewind during the animation
+        // restarts the effect with the accumulated list, and the `finally` keeps a
+        // gray card from getting stuck on screen.
         try {
             val shown = passed.take(3)
             shown.forEachIndexed { i, file ->
@@ -388,7 +388,7 @@ private fun ColumnScope.Deck(
         vm.consumePassedTrash()
     }
 
-    /** Joga o card para fora da tela e só então registra a decisão. */
+    /** Flings the card off screen and only then records the decision. */
     fun fling(dir: Dir) {
         if (busy || area == IntSize.Zero) return
         busy = true
@@ -414,8 +414,8 @@ private fun ColumnScope.Deck(
         }
     }
 
-    // Pré-carrega a imagem do terceiro card (o de trás já está na tela), no
-    // mesmo tamanho dos cards, para ela sair do cache de memória sem espera.
+    // Preload the third card's image (the back one is already on screen) at
+    // card size, so it comes straight out of the memory cache with no wait.
     val context = LocalContext.current
     val third = ui.afterNext
     LaunchedEffect(third?.key, area) {
@@ -425,13 +425,13 @@ private fun ColumnScope.Deck(
         )
     }
 
-    // Vibração curta ao cruzar o limiar de uma decisão.
+    // Short vibration when crossing a decision threshold.
     val zone by remember(top.key) { derivedStateOf { zoneOf(motion.x.value, motion.y.value, area) } }
     LaunchedEffect(zone) {
         if (zone != null) haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
     }
 
-    /** 0 a 1: o quanto o card já andou em direção a cada decisão. */
+    /** 0 to 1: how far the card has moved toward each decision. */
     fun progress(dir: Dir): Float {
         if (area == IntSize.Zero || entering) return 0f
         val x = motion.x.value
@@ -475,8 +475,8 @@ private fun ColumnScope.Deck(
                 detectTapGestures(onTap = { if (!busy) onOpen(top) })
             },
     ) {
-        // De trás para a frente. O `key` faz o card de trás virar o da frente
-        // sem recriar a imagem, então não pisca.
+        // Back to front. The `key` lets the back card become the front one
+        // without recreating the image, so it doesn't flicker.
         listOfNotNull(next, top).forEach { file ->
             key(file.key) {
                 val isTop = file.key == top.key
@@ -484,7 +484,7 @@ private fun ColumnScope.Deck(
                     file = file,
                     isTop = isTop,
                     playVideo = isTop && !videoPaused,
-                    // Os dois cards da pilha ficam com o player pronto.
+                    // Both cards in the stack keep their player ready.
                     prepareVideo = true,
                     stamps = { Stamps(progress(Dir.RIGHT), progress(Dir.LEFT), progress(Dir.UP)) },
                     modifier = Modifier
@@ -496,7 +496,7 @@ private fun ColumnScope.Deck(
                                 rotationZ = if (size.width == 0f) 0f else motion.x.value / size.width * MAX_ROTATION
                                 transformOrigin = TransformOrigin(0.5f, 1f)
                             } else {
-                                // O card de trás cresce enquanto o da frente sai.
+                                // The back card grows as the front one leaves.
                                 val p = maxOf(progress(Dir.LEFT), progress(Dir.RIGHT), progress(Dir.UP))
                                 val s = 0.94f + 0.06f * p
                                 scaleX = s
@@ -509,7 +509,7 @@ private fun ColumnScope.Deck(
             }
         }
 
-        // Cards cinza "na lixeira" por cima da pilha, de passagem.
+        // Passing gray "na lixeira" (in trash) cards on top of the stack.
         ghost?.let { TrashedGhost(it.file, it.more, Modifier.fillMaxSize().graphicsLayer {
             translationX = ghostX.value
             alpha = ghostAlpha.value
@@ -529,8 +529,9 @@ private fun ColumnScope.Deck(
 }
 
 /**
- * Miniaturas dos arquivos no buffer ("lixeira em 2", "lixeira em 1").
- * Tocar numa delas rebobina até ela. A altura é fixa para a tela não pular.
+ * Thumbnails of the files in the trash queue ("lixeira em 2", "lixeira em 1":
+ * trash in 2, in 1). Tapping one rewinds to it. The height is fixed so the
+ * screen doesn't jump.
  */
 @Composable
 private fun PendingRow(ui: SwipeUi, enabled: Boolean, onRewindTo: (Int) -> Unit) {
@@ -549,7 +550,7 @@ private fun PendingRow(ui: SwipeUi, enabled: Boolean, onRewindTo: (Int) -> Unit)
                 Modifier
                     .clip(RoundedCornerShape(50))
                     .background(MaterialTheme.colorScheme.surfaceVariant)
-                    // Travado enquanto um card voa para fora (ver `busy` no Deck).
+                    // Locked while a card flies off (see `busy` in Deck).
                     .clickable(enabled = enabled) { onRewindTo(index) }
                     .padding(start = 4.dp, top = 4.dp, bottom = 4.dp, end = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -574,7 +575,7 @@ private fun PendingRow(ui: SwipeUi, enabled: Boolean, onRewindTo: (Int) -> Unit)
     }
 }
 
-/** A fileira de botões redondos do Tinder: rebobinar, X, estrela e coração. */
+/** The row of Tinder-style round buttons: rewind, X, star and heart. */
 @Composable
 private fun ActionButtons(
     canRewind: Boolean,
@@ -599,8 +600,8 @@ private fun ActionButtons(
 }
 
 /**
- * Botão redondo com sombra. Como no Tinder, ele "acende" (fundo colorido,
- * ícone branco) conforme o card é arrastado na direção dele.
+ * Round button with a shadow. As in Tinder, it "lights up" (colored background,
+ * white icon) as the card is dragged toward it.
  */
 @Composable
 private fun RoundAction(
@@ -633,7 +634,7 @@ private fun RoundAction(
     }
 }
 
-/** Pasta sem fotos nem vídeos. */
+/** Folder with no photos or videos. */
 @Composable
 private fun ColumnScope.EmptyState(onChangeFolder: () -> Unit) {
     Column(
@@ -651,8 +652,8 @@ private fun ColumnScope.EmptyState(onChangeFolder: () -> Unit) {
 }
 
 /**
- * Fim da fila: números da pasta e, se ainda houver arquivos no buffer, a
- * confirmação para mandá-los para a lixeira. Nada vai sem esse toque.
+ * End of the queue: the folder's stats and, if files remain in the trash queue,
+ * the confirmation to send them to the trash. Nothing goes without that tap.
  */
 @Composable
 private fun ColumnScope.Summary(
@@ -738,10 +739,10 @@ private fun BratButton(text: String, onClick: () -> Unit) {
     ) { Text(text, fontWeight = FontWeight.Bold) }
 }
 
-/** Um card cinza de passagem, e quantos outros na lixeira foram pulados junto. */
+/** A passing gray card, and how many other trashed files were skipped with it. */
 private data class Ghost(val file: MediaFile, val more: Int)
 
-/** Card cinza "na lixeira": a foto em preto e branco, escurecida, sem ação. */
+/** Gray "na lixeira" card: the photo in darkened black and white, inert. */
 @Composable
 private fun TrashedGhost(file: MediaFile, more: Int, modifier: Modifier = Modifier) {
     Box(

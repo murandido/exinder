@@ -56,9 +56,9 @@ import app.exinder.util.formatDuration
 import coil3.compose.AsyncImage
 
 /**
- * Tela cheia aberta ao tocar no card: foto com zoom de pinça, GIF animado ou
- * vídeo com som e controles. Os metadados ficam no topo, longe dos controles
- * do vídeo. Arrastar para baixo (sem zoom) fecha.
+ * Fullscreen view opened by tapping the card: pinch-to-zoom photo, animated GIF
+ * or video with sound and controls. Metadata sits at the top, away from the
+ * video controls. Dragging down (when not zoomed) closes it.
  */
 @Composable
 fun FullscreenViewer(file: MediaFile, onClose: () -> Unit) {
@@ -78,7 +78,7 @@ fun FullscreenViewer(file: MediaFile, onClose: () -> Unit) {
             Modifier
                 .fillMaxSize()
                 .onSizeChanged { height = it.height }
-                // O fundo clareia conforme a tela desce, como nas galerias.
+                // The background fades as the view is dragged down, like in gallery apps.
                 .background(Color.Black.copy(alpha = 1f - (drag.value / height).coerceIn(0f, 0.6f)))
                 .dragDownToClose(
                     enabled = { !zoomed },
@@ -138,7 +138,7 @@ fun FullscreenViewer(file: MediaFile, onClose: () -> Unit) {
     }
 }
 
-/** Imagem com pinça para zoom, arrasto quando ampliada e toque duplo para voltar. */
+/** Image with pinch to zoom, panning when zoomed in, and double tap to reset. */
 @Composable
 private fun ZoomableImage(file: MediaFile, onZoomed: (Boolean) -> Unit) {
     var scale by remember { mutableFloatStateOf(1f) }
@@ -147,8 +147,8 @@ private fun ZoomableImage(file: MediaFile, onZoomed: (Boolean) -> Unit) {
     val state = rememberTransformableState { zoom, pan, _ ->
         scale = (scale * zoom).coerceIn(1f, 6f)
         onZoomed(scale > 1f)
-        // O deslocamento fica limitado à sobra da imagem ampliada, para ela
-        // nunca sair inteira da tela; ao diminuir o zoom, o limite encolhe junto.
+        // The offset is clamped to the zoomed image's overflow, so it never fully
+        // leaves the screen; zooming out shrinks the limit along with it.
         val maxX = size.width * (scale - 1f) / 2f
         val maxY = size.height * (scale - 1f) / 2f
         val moved = offset + pan
@@ -181,10 +181,11 @@ private fun ZoomableImage(file: MediaFile, onZoomed: (Boolean) -> Unit) {
 }
 
 /**
- * Arrastar para baixo com um dedo. Lê os toques na passada inicial, antes dos
- * filhos, porque o player de vídeo é uma View do Android que fica com todos os
- * toques. Só assume o gesto quando o movimento passa do limiar e é claramente
- * para baixo; antes disso, tudo segue normal para os filhos (zoom, controles).
+ * One-finger drag down. Reads touches in the initial pass, before the
+ * children, because the video player is an Android View that consumes all
+ * touches. Only takes over the gesture once the movement passes the threshold
+ * and is clearly downward; until then, everything goes to the children as
+ * usual (zoom, controls).
  */
 private fun Modifier.dragDownToClose(
     enabled: () -> Boolean,
@@ -198,7 +199,7 @@ private fun Modifier.dragDownToClose(
         var total = Offset.Zero
         while (true) {
             val event = awaitPointerEvent(PointerEventPass.Initial)
-            // Segundo dedo: é pinça, não arrasto.
+            // Second finger: it's a pinch, not a drag.
             if (event.changes.size > 1) {
                 if (dragging) onRelease()
                 return@awaitEachGesture

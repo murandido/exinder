@@ -18,10 +18,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 
 /**
- * Ponto de entrada do processo.
+ * Process entry point.
  *
- * Também configura o Coil (carregador de imagens) para entender GIFs animados
- * e tirar um quadro dos vídeos para usar como miniatura.
+ * Also configures Coil (the image loader) to decode animated GIFs and grab a
+ * frame from videos to use as a thumbnail.
  */
 class ExinderApp : Application(), SingletonImageLoader.Factory {
 
@@ -45,7 +45,7 @@ class ExinderApp : Application(), SingletonImageLoader.Factory {
 }
 
 /**
- * Injeção de dependências feita à mão: o app é pequeno e não precisa de Hilt.
+ * Hand-rolled dependency injection: the app is small and doesn't need Hilt.
  */
 class AppContainer(app: Application) {
 
@@ -59,8 +59,8 @@ class AppContainer(app: Application) {
     val prefs = Prefs(app)
 
     /**
-     * Escopo que vive tanto quanto o processo. O envio para a lixeira roda
-     * aqui para não ser cancelado se o usuário trocar de tela no meio.
+     * Scope that lives as long as the process. Sending to the trash runs here
+     * so it isn't cancelled if the user switches screens halfway through.
      */
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 }

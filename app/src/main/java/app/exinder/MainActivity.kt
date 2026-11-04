@@ -39,13 +39,13 @@ import app.exinder.ui.theme.ExinderTheme
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-/** A única Activity do app. A navegação entre telas é feita em Compose. */
+/** The app's only Activity. Navigation between screens is done in Compose. */
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        // Precisa acontecer antes da Activity ficar visível.
+        // Must happen before the Activity becomes visible.
         SystemRequests.attach(this)
 
         val container = (application as ExinderApp).container
@@ -56,8 +56,8 @@ class MainActivity : ComponentActivity() {
                 ThemeMode.CLARO -> false
                 ThemeMode.ESCURO -> true
             }
-            // Ícones da barra de status e de navegação acompanham o tema do app,
-            // que pode ser diferente do tema do sistema.
+            // Status and navigation bar icons follow the app's theme,
+            // which may differ from the system theme.
             LaunchedEffect(dark) {
                 val style = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) { dark }
                 enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
@@ -74,26 +74,26 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/** As telas do app. */
+/** The app's screens. */
 private sealed interface Screen {
     data object Folders : Screen
     data class Swipe(val folder: FolderRef) : Screen
 }
 
 /**
- * Raiz da navegação:
- * 1. sem permissão → tela de permissões;
- * 2. com permissão → última pasta aberta, ou a lista de pastas.
+ * Navigation root:
+ * 1. no permission → permissions screen;
+ * 2. with permission → last opened folder, or the folder list.
  */
 @Composable
 private fun ExinderRoot(container: AppContainer) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // Tela atual, guardada como texto para sobreviver à recriação da Activity
-    // (troca de tema, por exemplo): "" é a lista de pastas, o resto é a chave
-    // da pasta aberta. Fica aqui em cima, antes dos `return` da tela de
-    // permissões, para não ser esquecida enquanto ela aparece.
+    // Current screen, stored as a string to survive Activity recreation
+    // (a theme change, for example): "" is the folder list, anything else is the
+    // key of the open folder. It lives up here, before the permissions screen's
+    // `return`s, so it isn't forgotten while that screen is showing.
     var saved by rememberSaveable { mutableStateOf<String?>(null) }
     fun go(screen: Screen) {
         saved = when (screen) {
@@ -102,8 +102,8 @@ private fun ExinderRoot(container: AppContainer) {
         }
     }
 
-    // As permissões podem mudar fora do app (nas configurações), então são
-    // conferidas de novo toda vez que o app volta para a frente.
+    // Permissions can change outside the app (in Settings), so they are
+    // checked again every time the app returns to the foreground.
     var hasMedia by remember { mutableStateOf(hasMediaPermission(context)) }
     var canManage by remember { mutableStateOf(container.media.canManageMedia()) }
     LifecycleResumeEffect(Unit) {
@@ -117,7 +117,7 @@ private fun ExinderRoot(container: AppContainer) {
         .fillMaxSize()
         .background(MaterialTheme.colorScheme.background)
 
-    // Ainda lendo as preferências: um frame vazio, sem piscar a tela de permissões.
+    // Still reading preferences: an empty frame, without flashing the permissions screen.
     val skip = skipManage ?: run { Box(background); return }
 
     if (!hasMedia || (!canManage && !skip)) {
@@ -163,7 +163,7 @@ private fun ExinderRoot(container: AppContainer) {
     }
 }
 
-/** Permissões de leitura que, juntas, dão acesso total. Mudaram de nome no Android 13. */
+/** Read permissions that together grant full access. They were renamed in Android 13. */
 private fun fullAccessPermissions(): Array<String> =
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO)
@@ -172,8 +172,8 @@ private fun fullAccessPermissions(): Array<String> =
     }
 
 /**
- * O que pedir ao sistema. No Android 14+ inclui a permissão do "acesso
- * limitado", para o diálogo funcionar no modo normal (ver o manifesto).
+ * What to request from the system. On Android 14+ this includes the "limited
+ * access" permission, so the dialog works in normal mode (see the manifest).
  */
 fun mediaPermissions(): Array<String> =
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -186,13 +186,13 @@ private fun granted(context: Context, permission: String): Boolean =
     ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
 
 /**
- * `true` só com acesso total. O "acesso limitado" do Android 14 (escolher
- * algumas fotos) não serve: o app precisa ver a pasta inteira.
+ * `true` only with full access. Android 14's "limited access" (picking
+ * a few photos) isn't enough: the app needs to see the whole folder.
  */
 fun hasMediaPermission(context: Context): Boolean =
     fullAccessPermissions().all { granted(context, it) }
 
-/** O usuário escolheu "acesso limitado": o app só veria as fotos selecionadas. */
+/** The user chose "limited access": the app would only see the selected photos. */
 fun hasPartialMediaAccess(context: Context): Boolean =
     Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
         !hasMediaPermission(context) &&

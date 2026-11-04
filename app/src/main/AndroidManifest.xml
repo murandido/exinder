@@ -2,30 +2,30 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Leitura de fotos e vídeos. Até o Android 12L a permissão era uma só. -->
+    <!-- Reading photos and videos. Up to Android 12L this was a single permission. -->
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <!--
-        Declarada para o Android 14+ saber lidar com o "acesso limitado"
-        (escolher algumas fotos). Sem ela, o sistema entra num modo de
-        compatibilidade em que o app parece ter acesso total mas só vê as
-        fotos escolhidas. O app detecta esse caso e pede o acesso total.
+        Declared so Android 14+ knows the app handles "limited access"
+        (picking a few photos). Without it, the system falls back to a
+        compatibility mode where the app seems to have full access but only
+        sees the picked photos. The app detects this case and asks for full access.
     -->
     <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
 
     <!--
-        "Gerenciamento de mídia": deixa o app mandar arquivos para a lixeira e
-        marcar favoritos sem o Android pedir confirmação a cada arquivo.
-        O usuário concede uma vez, nas configurações do sistema.
+        "Media management": lets the app send files to the trash and mark
+        favorites without Android asking for confirmation on every file.
+        The user grants it once, in the system settings.
     -->
     <uses-permission
         android:name="android.permission.MANAGE_MEDIA"
         tools:ignore="ProtectedPermissions" />
 
-    <!-- De propósito, não existe permissão de INTERNET: nada sai do aparelho. -->
+    <!-- There is deliberately no INTERNET permission: nothing leaves the device. -->
 
     <application
         android:name=".ExinderApp"

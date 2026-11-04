@@ -10,21 +10,21 @@ import kotlinx.coroutines.flow.map
 
 private val Context.dataStore by preferencesDataStore(name = "prefs")
 
-/** Tema escolhido no menu. [SISTEMA] segue o modo claro/escuro do Android. */
+/** Theme chosen in the menu. [SISTEMA] follows Android's light/dark mode. */
 enum class ThemeMode(val label: String) {
     SISTEMA("igual ao sistema"),
     CLARO("claro"),
     ESCURO("escuro"),
 }
 
-/** Preferências pequenas do app, guardadas com DataStore. */
+/** Small app preferences, stored with DataStore. */
 class Prefs(private val context: Context) {
 
     private val lastFolderKey = stringPreferencesKey("last_folder")
     private val skipManageMediaKey = booleanPreferencesKey("skip_manage_media")
     private val themeKey = stringPreferencesKey("theme")
 
-    /** Tema do app; padrão: igual ao sistema. */
+    /** App theme; defaults to following the system. */
     val theme: Flow<ThemeMode> = context.dataStore.data.map { prefs ->
         prefs[themeKey]?.let { saved -> ThemeMode.entries.firstOrNull { it.name == saved } } ?: ThemeMode.SISTEMA
     }
@@ -33,7 +33,7 @@ class Prefs(private val context: Context) {
         context.dataStore.edit { prefs -> prefs[themeKey] = mode.name }
     }
 
-    /** Última pasta aberta, para o app voltar direto nela. */
+    /** Last opened folder, so the app can go straight back to it. */
     val lastFolder: Flow<FolderRef?> =
         context.dataStore.data.map { prefs -> prefs[lastFolderKey]?.let(FolderRef::fromKey) }
 
@@ -44,8 +44,8 @@ class Prefs(private val context: Context) {
     }
 
     /**
-     * O usuário pode seguir sem o "Gerenciamento de mídia". O app funciona,
-     * mas o Android passa a pedir confirmação a cada envio para a lixeira.
+     * The user may continue without "Media management". The app still works,
+     * but Android then asks for confirmation on every send to the trash.
      */
     val skipManageMedia: Flow<Boolean> =
         context.dataStore.data.map { prefs -> prefs[skipManageMediaKey] ?: false }

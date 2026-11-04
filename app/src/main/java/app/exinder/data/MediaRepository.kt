@@ -11,33 +11,33 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Tudo o que o app lê ou altera no MediaStore.
+ * Everything the app reads from or changes in MediaStore.
  *
- * O MediaStore é o índice de mídia do Android. Usar ele (em vez de varrer o
- * sistema de arquivos) dá três coisas de graça:
- * - a data de captura já extraída do EXIF / metadado do vídeo;
- * - a lixeira do sistema, que guarda o arquivo por 30 dias;
- * - a marcação de favorito, que a galeria do aparelho também enxerga.
+ * MediaStore is Android's media index. Using it (instead of walking the
+ * file system) gives three things for free:
+ * - the capture date, already extracted from EXIF / video metadata;
+ * - the system trash, which keeps files for 30 days;
+ * - the favorite flag, which the device's gallery also sees.
  */
 class MediaRepository(private val context: Context) {
 
     private val resolver get() = context.contentResolver
 
-    /** Tabela que junta imagens e vídeos de todos os volumes externos. */
+    /** Table combining images and videos from all external volumes. */
     private val filesUri: Uri = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL)
 
-    /** Filtro de "só fotos, GIFs e vídeos". */
+    /** Filter for "only photos, GIFs and videos". */
     private val mediaSelection =
         "(${FileColumns.MEDIA_TYPE} = ${FileColumns.MEDIA_TYPE_IMAGE} " +
             "OR ${FileColumns.MEDIA_TYPE} = ${FileColumns.MEDIA_TYPE_VIDEO})"
 
     /**
-     * Lista todas as pastas que têm mídia, com quantos arquivos ainda faltam revisar.
+     * Lists every folder that has media, with how many files are left to review.
      *
-     * @param decided chaves ([MediaFile.key]) dos arquivos que já têm decisão.
+     * @param decided keys ([MediaFile.key]) of the files that already have a decision.
      */
     suspend fun folders(decided: Set<String>): List<FolderInfo> = withContext(Dispatchers.IO) {
-        // Acumulador por pasta, preenchido numa única passada pelo cursor.
+        // Per-folder accumulator, filled in a single pass over the cursor.
         class Acc {
             var total = 0
             var remaining = 0
@@ -89,10 +89,10 @@ class MediaRepository(private val context: Context) {
     }
 
     /**
-     * Arquivos de uma pasta (sem subpastas), do mais antigo para o mais novo.
+     * Files in a folder (excluding subfolders), oldest to newest.
      *
-     * Arquivos que já estão na lixeira do sistema não aparecem: o MediaStore
-     * os esconde por padrão.
+     * Files already in the system trash don't appear: MediaStore
+     * hides them by default.
      */
     suspend fun items(folder: FolderRef): List<MediaFile> = withContext(Dispatchers.IO) {
         val projection = arrayOf(
@@ -144,30 +144,30 @@ class MediaRepository(private val context: Context) {
             }
         }
 
-        // Empate de data (rajadas de fotos, por exemplo) é resolvido pelo nome.
+        // Date ties (photo bursts, for example) are broken by name.
         result.sortedWith(compareBy<MediaFile> { it.takenAt }.thenBy { it.name })
     }
 
     /**
-     * Pedido para mandar arquivos para a lixeira do sistema (ou tirar de lá).
+     * Request to move files to the system trash (or take them back out).
      *
-     * O Android sempre devolve um [PendingIntent] que precisa ser disparado por
-     * uma Activity. Com a permissão "Gerenciamento de mídia" concedida, ele
-     * volta na hora, sem mostrar diálogo nenhum.
+     * Android always returns a [PendingIntent] that must be launched by
+     * an Activity. With the "Media management" permission granted, it
+     * completes immediately without showing any dialog.
      */
     fun trashRequest(uris: List<Uri>, trashed: Boolean): PendingIntent =
         MediaStore.createTrashRequest(resolver, uris, trashed)
 
-    /** Pedido para marcar (ou desmarcar) arquivos como favoritos. Mesmo esquema da lixeira. */
+    /** Request to mark (or unmark) files as favorites. Same mechanism as the trash. */
     fun favoriteRequest(uris: List<Uri>, favorite: Boolean): PendingIntent =
         MediaStore.createFavoriteRequest(resolver, uris, favorite)
 
-    /** `true` se o usuário já liberou o "Gerenciamento de mídia" para o app. */
+    /** `true` if the user has already granted "Media management" to the app. */
     fun canManageMedia(): Boolean = MediaStore.canManageMedia(context)
 
     /**
-     * URI "tipada" (Images ou Video) de um arquivo.
-     * Os pedidos de lixeira e favorito exigem esse formato, não o da tabela Files.
+     * "Typed" URI (Images or Video) of a file.
+     * Trash and favorite requests require this form, not the Files table one.
      */
     private fun contentUri(volume: String, id: Long, mediaType: Int): Uri {
         val collection = if (mediaType == FileColumns.MEDIA_TYPE_VIDEO) {
@@ -179,8 +179,8 @@ class MediaRepository(private val context: Context) {
     }
 
     /**
-     * Data usada para ordenar: a de captura quando existe; senão, a de
-     * modificação (que o MediaStore guarda em segundos, não milissegundos).
+     * Date used for sorting: the capture date when present; otherwise the
+     * modification date (which MediaStore stores in seconds, not milliseconds).
      */
     private fun takenAt(dateTakenMs: Long, dateModifiedSec: Long): Long =
         if (dateTakenMs > 0) dateTakenMs else dateModifiedSec * 1000

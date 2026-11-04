@@ -53,12 +53,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/** Carrega a lista de pastas com o progresso de cada uma. */
+/** Loads the folder list with each folder's progress. */
 class FoldersViewModel(private val container: AppContainer) : ViewModel() {
 
     private val _folders = MutableStateFlow<List<FolderInfo>?>(null)
 
-    /** `null` enquanto carrega. */
+    /** `null` while loading. */
     val folders: StateFlow<List<FolderInfo>?> = _folders.asStateFlow()
 
     fun load() {
@@ -70,15 +70,15 @@ class FoldersViewModel(private val container: AppContainer) : ViewModel() {
 }
 
 /**
- * Lista todas as pastas com mídia do aparelho. Cada subpasta é um item
- * separado, com a quantidade de arquivos e quanto já foi revisado.
+ * Lists every folder on the device that has media. Each subfolder is a
+ * separate item, with its file count and how much has been reviewed.
  */
 @Composable
 fun FoldersScreen(container: AppContainer, onOpen: (FolderRef) -> Unit) {
     val vm: FoldersViewModel = viewModel { FoldersViewModel(container) }
     val folders by vm.folders.collectAsStateWithLifecycle()
 
-    // Recarrega toda vez que a tela aparece, para o progresso estar em dia.
+    // Reload every time the screen appears, so progress is up to date.
     LaunchedEffect(Unit) { vm.load() }
 
     Column(
@@ -120,7 +120,7 @@ fun FoldersScreen(container: AppContainer, onOpen: (FolderRef) -> Unit) {
     }
 }
 
-/** Uma linha da lista: miniatura, nome, caminho e barra de progresso. */
+/** A list row: thumbnail, name, path and progress bar. */
 @Composable
 private fun FolderRow(folder: FolderInfo, onClick: () -> Unit) {
     val reviewed = folder.total - folder.remaining
@@ -166,8 +166,8 @@ private fun FolderRow(folder: FolderInfo, onClick: () -> Unit) {
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            // Corta pelo começo: o fim do caminho é o que diferencia pastas
-            // de mesmo nome (ex.: as duas "WhatsApp Images").
+            // Truncate at the start: the end of the path is what tells apart folders
+            // with the same name (e.g. the two "WhatsApp Images").
             Text(
                 folder.ref.relativePath.trimEnd('/'),
                 fontSize = 12.sp,

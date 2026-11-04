@@ -1,4 +1,4 @@
-# Estilo de código compartilhado entre editores.
+# Code style shared across editors.
 root = true
 
 [*]

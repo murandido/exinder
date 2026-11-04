@@ -11,24 +11,24 @@ import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
 /**
- * Uma decisão gravada sobre um arquivo.
+ * A stored decision about a file.
  *
- * Gravar a cada swipe é o que garante que matar o app no meio não perde nada
- * e não apaga o que ainda estava no buffer.
+ * Writing on every swipe is what guarantees that killing the app midway loses
+ * nothing and doesn't delete what was still in the trash queue.
  */
 @Entity(tableName = "decision", indices = [Index("folderKey")])
 data class Decision(
-    /** [MediaFile.key], ou seja, a URI do MediaStore. */
+    /** [MediaFile.key], i.e. the MediaStore URI. */
     @PrimaryKey val uri: String,
-    /** [FolderRef.key] da pasta onde o arquivo estava. */
+    /** [FolderRef.key] of the folder the file was in. */
     val folderKey: String,
     val status: Status,
-    /** Tamanho em bytes, guardado para somar o espaço liberado. */
+    /** Size in bytes, stored to total up the space freed. */
     val size: Long,
     val decidedAt: Long,
 )
 
-/** Resumo do que já foi para a lixeira numa pasta. */
+/** Summary of what has already gone to the trash in a folder. */
 data class TrashStats(
     val count: Int,
     val bytes: Long,
@@ -41,9 +41,9 @@ interface DecisionDao {
     suspend fun forFolder(folderKey: String): List<Decision>
 
     /**
-     * Arquivos já revisados de vez: mantidos ou favoritos. Os marcados para a
-     * lixeira que ainda não foram contam como "pra revisar", para a pasta não
-     * aparecer como concluída com arquivos esperando o "mandar agora".
+     * Files reviewed for good: kept or favorited. Files marked for the trash
+     * that haven't gone yet count as "to review", so the folder doesn't show
+     * as done while files are waiting for "mandar agora" (send now).
      */
     @Query("SELECT uri FROM decision WHERE status IN ('MANTER', 'FAVORITO')")
     suspend fun decidedUris(): List<String>
@@ -58,8 +58,8 @@ interface DecisionDao {
     suspend fun delete(uri: String)
 
     /**
-     * Esquece as decisões de uma pasta, sem mexer em arquivo nenhum.
-     * O histórico da lixeira fica, para o contador de espaço liberado não zerar.
+     * Forgets a folder's decisions without touching any file.
+     * The trash history is kept so the freed-space counter doesn't reset.
      */
     @Query("DELETE FROM decision WHERE folderKey = :folderKey AND status != 'NA_LIXEIRA'")
     suspend fun resetFolder(folderKey: String)
