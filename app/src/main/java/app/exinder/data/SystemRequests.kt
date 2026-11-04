@@ -39,13 +39,25 @@ object SystemRequests {
         }
     }
 
-    /** Chamado no `onDestroy`. Um pedido em andamento é dado como recusado. */
+    /**
+     * Chamado no `onDestroy`.
+     *
+     * Se a Activity está só sendo recriada (troca de tema claro/escuro, de
+     * idioma...), um pedido em andamento continua esperando: o Android entrega
+     * a resposta ao launcher que a nova Activity registra em [attach]. Dar o
+     * pedido como recusado aqui faria o app registrar o contrário do que o
+     * usuário respondeu no diálogo.
+     *
+     * Se a Activity está fechando de vez, o pedido é dado como recusado.
+     */
     fun detach(activity: ComponentActivity) {
         if (owner !== activity) return
         owner = null
         launcher = null
-        pending?.complete(false)
-        pending = null
+        if (!activity.isChangingConfigurations) {
+            pending?.complete(false)
+            pending = null
+        }
     }
 
     /**
