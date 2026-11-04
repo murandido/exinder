@@ -17,6 +17,7 @@
     <string name="folders_empty">no photos or videos found</string>
     <string name="folder_remaining">%1$s of %2$s to review</string>
     <string name="cd_reviewed">reviewed</string>
+    <string name="video_error">couldn\'t play this video</string>
     <string name="card_error">couldn\'t open this file</string>
     <string name="msg_favorite_failed">couldn\'t favorite %1$s</string>
     <string name="msg_trash_failed">couldn\'t send %1$s to the trash</string>

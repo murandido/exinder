@@ -16,6 +16,7 @@
     <string name="folders_empty">nenhuma foto ou vídeo encontrado</string>
     <string name="folder_remaining">%1$s de %2$s pra revisar</string>
     <string name="cd_reviewed">revisada</string>
+    <string name="video_error">não deu pra tocar esse vídeo</string>
     <string name="card_error">não deu pra abrir esse arquivo</string>
     <string name="msg_favorite_failed">não deu pra favoritar %1$s</string>
     <string name="msg_trash_failed">não deu pra mandar %1$s pra lixeira</string>
