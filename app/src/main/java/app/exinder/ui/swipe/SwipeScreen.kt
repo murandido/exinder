@@ -47,6 +47,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -382,6 +383,9 @@ private fun ColumnScope.Deck(
     // inert gray card before the target card appears.
     // Shows at most 3; the last one says how many more were skipped.
     var ghost by remember { mutableStateOf<Ghost?>(null) }
+    // If the stack leaves the screen mid-animation (the last card was decided),
+    // the list is dropped so it isn't replayed by a later rewind.
+    DisposableEffect(vm) { onDispose { vm.consumePassedTrash() } }
     val ghostX = remember { Animatable(0f) }
     val ghostAlpha = remember { Animatable(0f) }
     LaunchedEffect(ui.passedTrash) {
@@ -503,8 +507,10 @@ private fun ColumnScope.Deck(
                     file = file,
                     isTop = isTop,
                     playVideo = isTop && !videoPaused,
-                    // Both cards in the stack keep their player ready.
-                    prepareVideo = true,
+                    // Both cards in the stack keep their player ready, except while
+                    // the full screen viewer is open: then they let go of their
+                    // decoders, which are a limited resource on some phones.
+                    prepareVideo = !videoPaused,
                     stamps = { Stamps(progress(Dir.RIGHT), progress(Dir.LEFT), progress(Dir.UP)) },
                     modifier = Modifier
                         .fillMaxSize()
