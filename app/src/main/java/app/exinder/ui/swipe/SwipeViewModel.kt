@@ -148,10 +148,18 @@ class SwipeViewModel(
         }
     }
 
-    /** Decide o card de cima: direita mantém, cima favorita, esquerda marca para a lixeira. */
-    fun decide(dir: Dir) {
+    /**
+     * Decide o card de cima: direita mantém, cima favorita, esquerda marca para a lixeira.
+     *
+     * @param key o card que o usuário decidiu. A decisão chega depois da
+     *   animação de saída; se nesse meio-tempo o card de cima mudou (um toque
+     *   numa miniatura da fila, por exemplo), ela é descartada em vez de cair
+     *   no card errado.
+     */
+    fun decide(dir: Dir, key: String) {
         val before = _ui.value
         val file = before.current ?: return
+        if (file.key != key) return
         val status = when (dir) {
             Dir.RIGHT -> Status.MANTER
             Dir.UP -> Status.FAVORITO

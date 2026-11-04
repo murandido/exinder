@@ -323,7 +323,7 @@ private fun ColumnScope.Deck(ui: SwipeUi, vm: SwipeViewModel, onOpen: (MediaFile
                     Dir.UP -> launch { motion.y.animateTo(-area.height * 1.5f, spec) }
                 }
             }
-            vm.decide(dir)
+            vm.decide(dir, top.key)
         }
     }
 
@@ -379,7 +379,7 @@ private fun ColumnScope.Deck(ui: SwipeUi, vm: SwipeViewModel, onOpen: (MediaFile
                         val dir = releaseDir(motion.x.value, motion.y.value, v.x, v.y, area)
                         if (dir != null) fling(dir) else springBack()
                     },
-                    onDragCancel = { springBack() },
+                    onDragCancel = { if (!busy) springBack() },
                 )
             }
             .pointerInput(top.key) {
@@ -418,7 +418,7 @@ private fun ColumnScope.Deck(ui: SwipeUi, vm: SwipeViewModel, onOpen: (MediaFile
         }
     }
 
-    PendingRow(ui, vm)
+    PendingRow(ui, enabled = !busy, onRewindTo = vm::rewindTo)
 
     ActionButtons(
         canRewind = ui.canRewind,
@@ -435,7 +435,7 @@ private fun ColumnScope.Deck(ui: SwipeUi, vm: SwipeViewModel, onOpen: (MediaFile
  * Tocar numa delas rebobina até ela. A altura é fixa para a tela não pular.
  */
 @Composable
-private fun PendingRow(ui: SwipeUi, vm: SwipeViewModel) {
+private fun PendingRow(ui: SwipeUi, enabled: Boolean, onRewindTo: (Int) -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
