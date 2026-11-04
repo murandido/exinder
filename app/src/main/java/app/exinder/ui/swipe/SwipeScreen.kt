@@ -335,6 +335,9 @@ private fun ColumnScope.Deck(
     val motion = remember(top.key) { CardMotion() }
     // Trava os gestos enquanto o card voa para fora, contra toque duplo.
     var busy by remember(top.key) { mutableStateOf(false) }
+    // Enquanto o card volta de um rebobinar, a mola passa um pouco do centro;
+    // sem isso, um card "mantido" piscaria o carimbo APAGA na volta.
+    var entering by remember(top.key) { mutableStateOf(false) }
 
     // Depois de um rebobinar, o card volta animando pelo lado por onde saiu.
     LaunchedEffect(top.key) {
@@ -345,9 +348,14 @@ private fun ColumnScope.Deck(
             Dir.RIGHT -> motion.x.snapTo(area.width * 1.5f)
             Dir.UP -> motion.y.snapTo(-area.height * 1.5f)
         }
-        coroutineScope {
-            launch { motion.x.animateTo(0f, spring(dampingRatio = 0.75f, stiffness = 400f)) }
-            launch { motion.y.animateTo(0f, spring(dampingRatio = 0.75f, stiffness = 400f)) }
+        entering = true
+        try {
+            coroutineScope {
+                launch { motion.x.animateTo(0f, spring(dampingRatio = 0.75f, stiffness = 400f)) }
+                launch { motion.y.animateTo(0f, spring(dampingRatio = 0.75f, stiffness = 400f)) }
+            }
+        } finally {
+            entering = false
         }
     }
 
@@ -425,7 +433,7 @@ private fun ColumnScope.Deck(
 
     /** 0 a 1: o quanto o card já andou em direção a cada decisão. */
     fun progress(dir: Dir): Float {
-        if (area == IntSize.Zero) return 0f
+        if (area == IntSize.Zero || entering) return 0f
         val x = motion.x.value
         val y = motion.y.value
         return when (dir) {
