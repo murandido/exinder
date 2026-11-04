@@ -61,6 +61,8 @@ data class MediaFile(
     /** Duração em milissegundos (só vídeos; 0 para o resto). */
     val durationMs: Long,
     val kind: MediaKind,
+    /** Favorito no sistema no momento da leitura, antes de qualquer swipe. */
+    val isFavorite: Boolean = false,
 ) {
     /** Chave usada no banco de decisões. */
     val key: String get() = uri.toString()

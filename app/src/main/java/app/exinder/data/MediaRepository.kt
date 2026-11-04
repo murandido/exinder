@@ -104,6 +104,7 @@ class MediaRepository(private val context: Context) {
             MediaColumns.DATE_TAKEN,
             MediaColumns.DATE_MODIFIED,
             MediaColumns.DURATION,
+            MediaColumns.IS_FAVORITE,
         )
         val selection =
             "$mediaSelection AND ${MediaColumns.RELATIVE_PATH} = ? AND ${MediaColumns.VOLUME_NAME} = ?"
@@ -119,6 +120,7 @@ class MediaRepository(private val context: Context) {
             val iTaken = c.getColumnIndexOrThrow(MediaColumns.DATE_TAKEN)
             val iModified = c.getColumnIndexOrThrow(MediaColumns.DATE_MODIFIED)
             val iDuration = c.getColumnIndexOrThrow(MediaColumns.DURATION)
+            val iFavorite = c.getColumnIndexOrThrow(MediaColumns.IS_FAVORITE)
 
             while (c.moveToNext()) {
                 val id = c.getLong(iId)
@@ -137,6 +139,7 @@ class MediaRepository(private val context: Context) {
                         mime == "image/gif" -> MediaKind.GIF
                         else -> MediaKind.IMAGE
                     },
+                    isFavorite = c.getInt(iFavorite) == 1,
                 )
             }
         }

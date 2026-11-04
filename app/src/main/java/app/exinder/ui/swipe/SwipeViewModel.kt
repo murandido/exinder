@@ -177,7 +177,8 @@ class SwipeViewModel(
             )
         }
 
-        if (status == Status.FAVORITO) {
+        // Já era favorito antes: não há o que pedir ao sistema.
+        if (status == Status.FAVORITO && !file.isFavorite) {
             container.appScope.launch {
                 val ok = runCatching {
                     SystemRequests.run(container.media.favoriteRequest(listOf(file.uri), true))
@@ -219,7 +220,9 @@ class SwipeViewModel(
 
         viewModelScope.launch { container.decisions.delete(file.key) }
 
-        if (previous == Status.FAVORITO) {
+        // Só desfaz o favorito que o próprio app colocou; um favorito que o
+        // arquivo já tinha antes do swipe fica onde está.
+        if (previous == Status.FAVORITO && !file.isFavorite) {
             container.appScope.launch {
                 runCatching {
                     SystemRequests.run(container.media.favoriteRequest(listOf(file.uri), false))
