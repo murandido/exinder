@@ -166,12 +166,14 @@ private fun FolderRow(folder: FolderInfo, onClick: () -> Unit) {
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            // Corta pelo começo: o fim do caminho é o que diferencia pastas
+            // de mesmo nome (ex.: as duas "WhatsApp Images").
             Text(
-                folder.ref.relativePath,
+                folder.ref.relativePath.trimEnd('/'),
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                overflow = TextOverflow.StartEllipsis,
             )
             Spacer(Modifier.height(6.dp))
             LinearProgressIndicator(
