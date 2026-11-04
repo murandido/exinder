@@ -31,6 +31,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -84,7 +85,8 @@ fun FullscreenViewer(file: MediaFile, onClose: () -> Unit) {
                 .fillMaxSize()
                 .onSizeChanged { height = it.height }
                 // The background fades as the view is dragged down, like in gallery apps.
-                .background(Color.Black.copy(alpha = 1f - (drag.value / height).coerceIn(0f, 0.6f)))
+                // Read while drawing, not composing, so a drag doesn't recompose the screen.
+                .drawBehind { drawRect(Color.Black.copy(alpha = 1f - (drag.value / height).coerceIn(0f, 0.6f))) }
                 .dragDownToClose(
                     enabled = { !zoomed },
                     onDrag = { dy -> scope.launch { drag.snapTo((drag.value + dy).coerceAtLeast(0f)) } },
