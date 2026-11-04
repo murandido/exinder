@@ -91,6 +91,7 @@ import app.exinder.AppContainer
 import app.exinder.R
 import app.exinder.data.FolderRef
 import app.exinder.data.MediaFile
+import app.exinder.data.MediaKind
 import app.exinder.data.Status
 import app.exinder.data.ThemeMode
 import app.exinder.data.TrashStats
@@ -107,6 +108,8 @@ import app.exinder.util.formatCount
 import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import coil3.size.Precision
+import coil3.size.Scale
 import kotlin.math.abs
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -440,9 +443,18 @@ private fun ColumnScope.Deck(ui: SwipeUi, vm: SwipeViewModel, videoPaused: Boole
     val context = LocalContext.current
     val third = ui.afterNext
     LaunchedEffect(third?.key, area) {
-        if (third == null || area == IntSize.Zero) return@LaunchedEffect
+        // Animated GIFs aren't kept in Coil's memory cache, so decoding one ahead
+        // of time would only be thrown away.
+        if (third == null || area == IntSize.Zero || third.kind == MediaKind.GIF) return@LaunchedEffect
         SingletonImageLoader.get(context).enqueue(
-            ImageRequest.Builder(context).data(third.uri).size(area.width, area.height).build(),
+            ImageRequest.Builder(context)
+                .data(third.uri)
+                .size(area.width, area.height)
+                // Same scale and precision the card's image will ask for, so the
+                // cached result is accepted instead of decoded again.
+                .scale(if (third.isSvg) Scale.FIT else Scale.FILL)
+                .precision(Precision.INEXACT)
+                .build(),
         )
     }
 
@@ -585,7 +597,12 @@ private fun PendingRow(ui: SwipeUi, enabled: Boolean, onRewindTo: (Int) -> Unit)
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 AsyncImage(
-                    model = file.uri,
+                    // Cached under its own key: the same URI's card-sized image
+                    // stays in the cache for when the user rewinds to it.
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(file.uri)
+                        .memoryCacheKey("${file.key}#thumb")
+                        .build(),
                     contentDescription = file.name,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
