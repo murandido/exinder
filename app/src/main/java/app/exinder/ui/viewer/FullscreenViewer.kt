@@ -1,5 +1,15 @@
 package app.exinder.ui.viewer
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.input.pointer.PointerEventPass
+import kotlin.math.abs
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
@@ -48,7 +58,7 @@ import coil3.compose.AsyncImage
 /**
  * Tela cheia aberta ao tocar no card: foto com zoom de pinça, GIF animado ou
  * vídeo com som e controles. Os metadados ficam no topo, longe dos controles
- * do vídeo.
+ * do vídeo. Arrastar para baixo (sem zoom) fecha.
  */
 @Composable
 fun FullscreenViewer(file: MediaFile, onClose: () -> Unit) {
@@ -59,14 +69,36 @@ fun FullscreenViewer(file: MediaFile, onClose: () -> Unit) {
             decorFitsSystemWindows = false,
         ),
     ) {
+        val scope = rememberCoroutineScope()
+        val drag = remember { Animatable(0f) }
+        var height by remember { mutableIntStateOf(1) }
+        var zoomed by remember { mutableStateOf(false) }
+
         Box(
             Modifier
                 .fillMaxSize()
-                .background(Color.Black),
+                .onSizeChanged { height = it.height }
+                // O fundo clareia conforme a tela desce, como nas galerias.
+                .background(Color.Black.copy(alpha = 1f - (drag.value / height).coerceIn(0f, 0.6f)))
+                .dragDownToClose(
+                    enabled = { !zoomed },
+                    onDrag = { dy -> scope.launch { drag.snapTo((drag.value + dy).coerceAtLeast(0f)) } },
+                    onRelease = {
+                        scope.launch {
+                            if (drag.value > height * 0.15f) {
+                                drag.animateTo(height.toFloat(), tween(160))
+                                onClose()
+                            } else {
+                                drag.animateTo(0f, spring(stiffness = 500f))
+                            }
+                        }
+                    },
+                )
+                .graphicsLayer { translationY = drag.value },
         ) {
             when (file.kind) {
                 MediaKind.VIDEO -> LoopingVideo(file.uri, Modifier.fillMaxSize(), controls = true)
-                else -> ZoomableImage(file)
+                else -> ZoomableImage(file, onZoomed = { zoomed = it })
             }
 
             Row(
@@ -108,12 +140,13 @@ fun FullscreenViewer(file: MediaFile, onClose: () -> Unit) {
 
 /** Imagem com pinça para zoom, arrasto quando ampliada e toque duplo para voltar. */
 @Composable
-private fun ZoomableImage(file: MediaFile) {
+private fun ZoomableImage(file: MediaFile, onZoomed: (Boolean) -> Unit) {
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     var size by remember { mutableStateOf(IntSize.Zero) }
     val state = rememberTransformableState { zoom, pan, _ ->
         scale = (scale * zoom).coerceIn(1f, 6f)
+        onZoomed(scale > 1f)
         // O deslocamento fica limitado à sobra da imagem ampliada, para ela
         // nunca sair inteira da tela; ao diminuir o zoom, o limite encolhe junto.
         val maxX = size.width * (scale - 1f) / 2f
@@ -133,6 +166,7 @@ private fun ZoomableImage(file: MediaFile) {
             .pointerInput(Unit) {
                 detectTapGestures(onDoubleTap = {
                     scale = 1f
+                    onZoomed(false)
                     offset = Offset.Zero
                 })
             }
@@ -144,4 +178,43 @@ private fun ZoomableImage(file: MediaFile) {
                 translationY = offset.y
             },
     )
+}
+
+/**
+ * Arrastar para baixo com um dedo. Lê os toques na passada inicial, antes dos
+ * filhos, porque o player de vídeo é uma View do Android que fica com todos os
+ * toques. Só assume o gesto quando o movimento passa do limiar e é claramente
+ * para baixo; antes disso, tudo segue normal para os filhos (zoom, controles).
+ */
+private fun Modifier.dragDownToClose(
+    enabled: () -> Boolean,
+    onDrag: (Float) -> Unit,
+    onRelease: () -> Unit,
+): Modifier = pointerInput(Unit) {
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+        if (!enabled()) return@awaitEachGesture
+        var dragging = false
+        var total = Offset.Zero
+        while (true) {
+            val event = awaitPointerEvent(PointerEventPass.Initial)
+            // Segundo dedo: é pinça, não arrasto.
+            if (event.changes.size > 1) {
+                if (dragging) onRelease()
+                return@awaitEachGesture
+            }
+            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+            if (!change.pressed) break
+            val delta = change.position - change.previousPosition
+            total += delta
+            if (!dragging && total.y > viewConfiguration.touchSlop && total.y > abs(total.x) * 2) {
+                dragging = true
+            }
+            if (dragging) {
+                change.consume()
+                onDrag(delta.y)
+            }
+        }
+        if (dragging) onRelease()
+    }
 }
