@@ -11,6 +11,7 @@ import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.gif.AnimatedImageDecoder
 import coil3.request.crossfade
+import coil3.svg.SvgDecoder
 import coil3.video.VideoFrameDecoder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -37,6 +38,7 @@ class ExinderApp : Application(), SingletonImageLoader.Factory {
             .components {
                 add(AnimatedImageDecoder.Factory())
                 add(VideoFrameDecoder.Factory())
+                add(SvgDecoder.Factory())
             }
             .crossfade(true)
             .build()

@@ -64,6 +64,12 @@ data class MediaFile(
 ) {
     /** Chave usada no banco de decisões. */
     val key: String get() = uri.toString()
+
+    /**
+     * SVG: desenho vetorial, quase sempre com fundo transparente e traço escuro.
+     * Vai sobre fundo branco e inteiro (sem cortar), senão some no card preto.
+     */
+    val isSvg: Boolean get() = mime == "image/svg+xml"
 }
 
 /**

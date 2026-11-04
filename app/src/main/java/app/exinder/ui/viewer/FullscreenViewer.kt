@@ -120,6 +120,7 @@ private fun ZoomableImage(file: MediaFile) {
         contentScale = ContentScale.Fit,
         modifier = Modifier
             .fillMaxSize()
+            .then(if (file.isSvg) Modifier.background(Color.White) else Modifier)
             .pointerInput(Unit) {
                 detectTapGestures(onDoubleTap = {
                     scale = 1f

@@ -127,8 +127,10 @@ private fun CardMedia(file: MediaFile, isTop: Boolean) {
     SubcomposeAsyncImage(
         model = file.uri,
         contentDescription = file.name,
-        contentScale = ContentScale.Crop,
-        modifier = Modifier.fillMaxSize(),
+        contentScale = if (file.isSvg) ContentScale.Fit else ContentScale.Crop,
+        modifier = Modifier
+            .fillMaxSize()
+            .then(if (file.isSvg) Modifier.background(Color.White).padding(24.dp) else Modifier),
         error = {
             Column(
                 Modifier.fillMaxSize(),
