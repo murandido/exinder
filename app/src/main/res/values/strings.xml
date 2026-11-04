@@ -6,7 +6,7 @@
     <string name="perm_media_title">photos and videos</string>
     <string name="perm_media_desc">to build each folder\'s queue</string>
     <string name="perm_media_partial">you only allowed some photos; the app needs to see the whole folder</string>
-    <string name="perm_media_blocked">denied. allow it in permissions › photos and videos › allow all</string>
+    <string name="perm_media_blocked">not allowed yet. open settings › permissions › photos and videos › allow all</string>
     <string name="perm_manage_title">media management</string>
     <string name="perm_manage_desc">to send files to the trash without Android asking every time</string>
     <string name="action_allow">allow</string>
