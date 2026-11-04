@@ -23,7 +23,7 @@
     <string name="msg_trash_failed">não deu pra mandar %1$s pra lixeira</string>
     <string name="cd_close">fechar</string>
     <string name="reset_title">resetar %1$s?</string>
-    <string name="reset_text">as decisões dessa pasta são esquecidas e a fila recomeça do início. nenhum arquivo é tocado.</string>
+    <string name="reset_text">as decisões dessa pasta são esquecidas e a fila recomeça do início. o que já foi pra lixeira continua lá e segue contando como liberado. nenhum arquivo é tocado.</string>
     <string name="action_reset">resetar</string>
     <string name="action_cancel">cancelar</string>
     <string name="cd_menu">menu</string>
