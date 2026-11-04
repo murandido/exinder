@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -190,6 +191,8 @@ private fun Stamp(
         fontFamily = Condensed,
         letterSpacing = 1.sp,
         modifier = modifier
+            // Invisível na maior parte do tempo: fora da leitura do TalkBack.
+            .clearAndSetSemantics { }
             .graphicsLayer {
                 this.alpha = alpha()
                 rotationZ = rotation
