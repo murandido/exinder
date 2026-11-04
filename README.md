@@ -56,7 +56,7 @@ Even then, the file goes to the **Android trash**, not straight to deletion: it 
 - **Card stack UI in *brat* green:** KEEP / DELETE / FAVORITE stamps, buttons that light up as you drag, a vibration when you cross the threshold and when a file actually goes to the trash.
 - **Photos, animated GIFs, SVGs and videos**, with videos looping muted inside the card.
 - **Preloading:** the next card's video player is already prepared, and the card after that is decoded ahead of time.
-- **Rewind shows what's gone:** files already sent to the trash pass by as grey "in the trash" cards.
+- **Rewind shows what's gone:** files sent to the trash during the current visit to a folder pass by as grey "in the trash" cards.
 - **Full screen** with pinch to zoom; drag down to close.
 - **Progress saved per folder:** close the app midway and come back to the same card, with the trash queue intact.
 - **Each subfolder is its own folder** in the list, with a review progress bar.
@@ -69,7 +69,7 @@ Even then, the file goes to the **Android trash**, not straight to deletion: it 
 
 Please read this before pointing exinder at photos you care about.
 
-- **No human code review.** Every line was written by an AI. A separate set of AI agents reviewed it twice and the bugs they found were fixed, but that is not a substitute for a careful human review.
+- **No human code review.** Every line was written by an AI. Separate AI agents reviewed it in three rounds and the bugs they found were fixed, but that is not a substitute for a careful human review.
 - **It moves real files to the trash.** A logic bug could send a file you didn't swipe left on to the trash, or send it without the 2-file grace. Files in the system trash are deleted permanently after about 30 days.
 - **With *Media management* on, nothing asks first.** That permission lets the app trash files without a system dialog. If you want a second chance on every file, skip it: Android will then confirm each one.
 - **Barely tested.** It has been used on a single phone (Samsung Galaxy S25 Ultra, Android 17). Other manufacturers handle the trash, SD cards and permissions differently.
@@ -87,9 +87,10 @@ Please read this before pointing exinder at photos you care about.
 | Permission | Why | Required |
 | :-- | :-- | :-: |
 | Photos and videos (`READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO`; `READ_EXTERNAL_STORAGE` on Android 12) | build each folder's queue | yes, full access |
+| Selected photos (`READ_MEDIA_VISUAL_USER_SELECTED`, Android 14+) | lets Android offer "limited access", so the app can tell it apart from full access and ask for the latter | declared, not enough on its own |
 | Media management (`MANAGE_MEDIA`) | send to the trash and favorite without a system dialog | recommended |
 
-Android 14+'s "limited access" (picking a few photos) isn't enough: the app needs to see the whole folder, and says so when that's the case. Without the second permission the app still works, but Android asks for confirmation every time something goes to the trash.
+That is the whole list: no network, no wake lock (the video library's own requests for those are removed from the manifest). Android 14+'s "limited access" (picking a few photos) isn't enough: the app needs to see the whole folder, and says so when that's the case. Without media management the app still works, but Android asks for confirmation every time something goes to the trash.
 
 ## Installing
 
@@ -147,24 +148,24 @@ app/src/main/java/app/exinder/
 └── util/Format.kt           # dates, sizes and numbers
 
 app/src/test/                # unit tests for the trash queue rules and formatting
-app/schemas/                 # Room database schema, one file per version
+app/schemas/                 # Room database schema, one file per version (from version 2)
 ```
 
 The original requirements document is in [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md).
 
 ## Quality gates
 
-Every push and pull request runs the [CI workflow](.github/workflows/ci.yml):
+Every pull request and every push to `main` runs the [CI workflow](.github/workflows/ci.yml), and `main` is protected: a pull request can only be merged when it passes.
 
 | Gate | What it checks |
 | :-- | :-- |
 | **Build** | `assembleDebug` and `assembleRelease` compile |
-| **Unit tests** | the trash queue rules, rewind and formatting (`./gradlew testDebugUnitTest`) |
+| **Unit tests** | the pure trash queue rules (grace period, pending files, when rewind is possible, failed sends) and formatting (`./gradlew testDebugUnitTest`) |
 | **Android Lint** | `./gradlew lintDebug`, failing on errors and on any new warning not in the baseline |
 | **ktlint** | Kotlin style, following [`.editorconfig`](.editorconfig) |
 | **Conventional Commits** | pull request commit messages follow the convention below |
 
-Dependabot keeps Gradle dependencies and GitHub Actions up to date. To run the same checks locally:
+The ViewModel, MediaStore and database code (including the database migration) have no automated tests yet; they were checked by reading and on one device. Dependabot keeps Gradle dependencies and GitHub Actions up to date. To run the same checks locally:
 
 ```bash
 ./gradlew ktlintCheck testDebugUnitTest lintDebug assembleDebug
@@ -182,6 +183,7 @@ Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md). Co
 | `refactor:` | code change with no behavior change |
 | `style:` | formatting only |
 | `test:` | tests |
+| `perf:` | performance improvement |
 | `docs:` | documentation |
 | `ci:` | CI and quality gates |
 | `chore:` | build, dependencies, configuration |

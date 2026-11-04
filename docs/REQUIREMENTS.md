@@ -175,7 +175,7 @@ A single module, Jetpack Compose and simple MVVM. No backend.
 
 ### Swipe state model
 
-The status names are the ones used in the code (Portuguese): `MANTER` = keep, `FAVORITO` = favorite, `LIXEIRA_PENDENTE` = pending trash, `NA_LIXEIRA` = in the trash.
+The status names below are the ones the code uses (Portuguese), except `PENDENTE`, which the code represents as "no decision stored": `MANTER` = keep, `FAVORITO` = favorite, `LIXEIRA_PENDENTE` = pending trash, `NA_LIXEIRA` = in the trash.
 
 ```kotlin
 enum class Status { PENDENTE, MANTER, FAVORITO, LIXEIRA_PENDENTE, NA_LIXEIRA }
@@ -245,7 +245,11 @@ Formal rule: when the user decides item `N+2`, item `N` goes to the trash if it 
 
 - **File types (FR02):** the app accepts every image and video MediaStore indexes, not only the listed formats. SVG files are also shown, rendered on a white background.
 - **Trash grace (FR07):** the 2-file grace is counted in decisions made after the file, not in positions. Rewinding over files already in the trash would otherwise give a newly marked file no grace at all.
-- **Grey "in the trash" cards:** only shown for files trashed in the current session. After the app restarts, trashed files are no longer readable, so they are skipped silently.
+- **Grey "in the trash" cards:** only shown for files sent to the trash during the current visit to the folder. MediaStore hides trashed files, so once the folder is read again (leaving and coming back, a reset, a restart) they are no longer in the queue and rewind simply skips them.
+- **"New" files (edge cases):** files added to the folder with a date older than the cursor do go to the end of the queue, but without a "new" label.
+- **Reset folder (FR16):** forgets every decision except the trash history, so the freed space and the counter total survive a reset.
+- **Dates (FR03):** without `DATE_TAKEN`, the app falls back straight to the modification date; it doesn't read EXIF or video metadata itself.
+- **Status names:** the code has no `PENDENTE` status; a file with no stored decision is pending.
 - **Background scan (NFR05):** the folder is scanned in one pass before the first card is shown; there is no incremental loading.
 - **Full screen metadata:** shown at the top, away from the video controls.
 - **Translations:** the UI is in English, with a Brazilian Portuguese translation.

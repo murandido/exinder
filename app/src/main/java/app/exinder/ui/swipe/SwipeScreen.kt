@@ -319,7 +319,7 @@ private fun TopBar(
     }
 }
 
-/** `1.234 / 5.678` on the left, `2,3 GB liberados` (freed) on the right. */
+/** `1,234 / 5,678` on the left, `2.3 GB freed` on the right. */
 @Composable
 private fun CounterRow(ui: SwipeUi, trash: TrashStats) {
     Row(
