@@ -18,9 +18,31 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // R8 shrinks the APK (most of it is the unused part of the
+            // extended icon set). Room, Compose and Media3 ship their own keep rules.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // There is no release key in the repository: release builds are
+            // signed with the local debug key, which is fine for sideloading
+            // your own build. To publish, add your own signing config.
             signingConfig = signingConfigs.getByName("debug")
         }
+    }
+
+    lint {
+        // Quality gate: errors fail the build, and so does any warning that
+        // isn't in the baseline (the warnings that existed when the gate was added).
+        abortOnError = true
+        warningsAsErrors = true
+        baseline = file("lint-baseline.xml")
+        // "A newer version is available" checks would fail CI whenever a library
+        // releases; Dependabot handles updates instead.
+        disable += setOf("GradleDependency", "NewerVersionAvailable", "AndroidGradlePluginVersion", "OldTargetApi")
+    }
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
     }
 
     compileOptions {
