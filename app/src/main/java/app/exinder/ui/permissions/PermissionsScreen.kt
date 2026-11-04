@@ -1,6 +1,7 @@
 package app.exinder.ui.permissions
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
@@ -30,6 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -70,14 +72,31 @@ fun PermissionsScreen(
 
     // After two denials, Android stops showing the dialog and the request comes
     // back denied immediately. In that case the button opens the app's settings.
+    //
+    // Telling "blocked" apart from "dialog dismissed with back": a dismissal
+    // also returns denied with no rationale, but only a real denial flips the
+    // rationale flag on. So the request counts as blocked when the rationale
+    // was on before and is off after (the second denial), or when a request
+    // returns denied without a rationale twice in a row (blocked from the start,
+    // e.g. denied in Settings).
     var blocked by rememberSaveable { mutableStateOf(false) }
+    var silentDenials by rememberSaveable { mutableIntStateOf(0) }
+    var rationaleBefore by rememberSaveable { mutableStateOf(false) }
+    val activity = context as? Activity
+    fun rationale(): Boolean = activity != null &&
+        ActivityCompat.shouldShowRequestPermissionRationale(activity, mediaPermissions().first())
     val requestMedia = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) {
         onRecheck()
-        val activity = context as? Activity
-        blocked = !hasMediaPermission(context) && !hasPartialMediaAccess(context) && activity != null &&
-            !ActivityCompat.shouldShowRequestPermissionRationale(activity, mediaPermissions().first())
+        val denied = !hasMediaPermission(context) && !hasPartialMediaAccess(context)
+        val rationaleAfter = rationale()
+        if (denied && !rationaleAfter) silentDenials++ else silentDenials = 0
+        blocked = denied && !rationaleAfter && (rationaleBefore || silentDenials >= 2)
+    }
+    val launchRequest = {
+        rationaleBefore = rationale()
+        requestMedia.launch(mediaPermissions())
     }
     val partial = !hasMedia && hasPartialMediaAccess(context)
     val openAppSettings = {
@@ -115,7 +134,7 @@ fun PermissionsScreen(
             },
             granted = hasMedia,
             action = stringResource(if (blocked && !partial) R.string.action_open_settings else R.string.action_allow),
-            onAction = { if (blocked && !partial) openAppSettings() else requestMedia.launch(mediaPermissions()) },
+            onAction = { if (blocked && !partial) openAppSettings() else launchRequest() },
         )
         Spacer(Modifier.height(12.dp))
         PermissionStep(
@@ -125,12 +144,15 @@ fun PermissionsScreen(
             granted = canManage,
             action = stringResource(R.string.action_open_settings),
             onAction = {
-                context.startActivity(
-                    Intent(
-                        Settings.ACTION_REQUEST_MANAGE_MEDIA,
-                        Uri.parse("package:${context.packageName}"),
-                    ),
-                )
+                // Some devices don't have this settings page; fall back to the
+                // app's settings rather than crashing.
+                try {
+                    context.startActivity(
+                        Intent(Settings.ACTION_REQUEST_MANAGE_MEDIA, Uri.parse("package:${context.packageName}")),
+                    )
+                } catch (_: ActivityNotFoundException) {
+                    openAppSettings()
+                }
             },
         )
 
