@@ -1,5 +1,6 @@
 package app.exinder.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Entity
@@ -8,6 +9,8 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.RoomDatabase
 import androidx.room.Upsert
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -25,7 +28,17 @@ data class Decision(
     val status: Status,
     /** Size in bytes, stored to total up the space freed. */
     val size: Long,
+    /**
+     * When the decision was made. The trash grace period is counted in
+     * decisions made *after* a file was marked, by this timestamp, so it
+     * doesn't depend on the files' order (which can change between sessions).
+     */
     val decidedAt: Long,
+    /**
+     * The app marked this file as a favorite (it wasn't one before the swipe).
+     * Undoing the decision only removes favorites the app itself set.
+     */
+    @ColumnInfo(defaultValue = "0") val appFavorited: Boolean = false,
 )
 
 /** Summary of what has already gone to the trash in a folder. */
@@ -71,7 +84,22 @@ interface DecisionDao {
     fun trashStats(folderKey: String): Flow<TrashStats>
 }
 
-@Database(entities = [Decision::class], version = 1, exportSchema = false)
+/**
+ * The schema is exported to `app/schemas/` so every version is checked into the
+ * repository. Each version bump needs a migration in [MIGRATIONS]; without one,
+ * Room would crash existing installs on first access.
+ */
+@Database(entities = [Decision::class], version = 2, exportSchema = true)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun decisions(): DecisionDao
 }
+
+/** Version 1 → 2: adds [Decision.appFavorited]. */
+private val MIGRATION_1_2 = object : Migration(1, 2) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE decision ADD COLUMN appFavorited INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
+/** Every schema migration, in order. */
+val MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2)

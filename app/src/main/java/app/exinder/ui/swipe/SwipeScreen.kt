@@ -83,6 +83,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.exinder.AppContainer
@@ -160,12 +161,14 @@ private fun releaseDir(x: Float, y: Float, vx: Float, vy: Float, size: IntSize):
 fun SwipeScreen(
     container: AppContainer,
     folder: FolderRef,
+    owner: ViewModelStoreOwner,
     onChangeFolder: () -> Unit,
 ) {
-    val vm: SwipeViewModel = viewModel(key = folder.key) { SwipeViewModel(container, folder) }
-    // Reload the folder every time it is opened: the ViewModel survives between
-    // visits, and the folder may have changed elsewhere in the meantime.
-    LaunchedEffect(vm) { vm.load() }
+    // Scoped to this visit to the folder (see ScreenStores): it loads the folder
+    // when created and survives Activity recreation.
+    val vm: SwipeViewModel = viewModel(viewModelStoreOwner = owner, key = folder.key) {
+        SwipeViewModel(container, folder)
+    }
     val ui by vm.ui.collectAsStateWithLifecycle()
     val trash by vm.trashStats.collectAsStateWithLifecycle()
     val context = LocalContext.current

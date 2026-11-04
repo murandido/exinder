@@ -162,6 +162,20 @@ class MediaRepository(private val context: Context) {
     fun favoriteRequest(uris: List<Uri>, favorite: Boolean): PendingIntent =
         MediaStore.createFavoriteRequest(resolver, uris, favorite)
 
+    /**
+     * `true` if [uri] still points to a file MediaStore shows. Trashed files
+     * are hidden by default, so a trashed file counts as missing, while a file
+     * moved to another folder (same ID, new path) still exists.
+     */
+    suspend fun exists(uri: Uri): Boolean = withContext(Dispatchers.IO) {
+        runCatching {
+            resolver.query(uri, arrayOf(MediaColumns._ID), null, null, null)?.use { it.count > 0 } ?: false
+        }.getOrDefault(false)
+    }
+
+    /** `true` if the storage volume (internal storage, an SD card) is currently mounted. */
+    fun isVolumeMounted(volume: String): Boolean = volume in MediaStore.getExternalVolumeNames(context)
+
     /** `true` if the user has already granted "Media management" to the app. */
     fun canManageMedia(): Boolean = MediaStore.canManageMedia(context)
 

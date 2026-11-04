@@ -1,5 +1,6 @@
 package app.exinder.ui.swipe
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.exinder.AppContainer
@@ -36,6 +37,10 @@ data class SwipeUi(
     val items: List<MediaFile> = emptyList(),
     /** Decision for each file, by [MediaFile.key]. No entry = still pending. */
     val status: Map<String, Status> = emptyMap(),
+    /** When each decision in [status] was made (a strictly increasing stamp). */
+    val decidedAt: Map<String, Long> = emptyMap(),
+    /** Files the app itself marked as favorites (see [Decision.appFavorited]). */
+    val appFavorited: Set<String> = emptySet(),
     /**
      * Index of the card on screen. Always points to an undecided file, or
      * to `items.size` once the queue is done.
@@ -80,17 +85,22 @@ data class SwipeUi(
             .filter { statusOf(items[it]) == Status.LIXEIRA_PENDENTE }
 
     /**
-     * How many decisions have been made after file [index]: counts the files
-     * between it and the cursor that have an active decision. Files already in
-     * the trash don't count, since they were decided earlier (the cursor skips
-     * over them after a rewind). Counting by position would give a file
-     * zero grace period in that case.
+     * How many decisions were made after file [index] was marked: active
+     * decisions (not already in the trash) with a later [decidedAt] stamp.
+     *
+     * Counting by time rather than by position keeps the grace period honest
+     * when positions shift: after a rewind over trashed files the cursor skips
+     * them, and between sessions files can be re-sorted (a changed date) or
+     * moved to the end of the queue.
      */
-    fun decisionsAfter(index: Int): Int =
-        (index + 1 until cursor.coerceAtMost(items.size)).count {
-            val s = statusOf(items[it])
-            s != null && s != Status.NA_LIXEIRA
-        }
+    fun decisionsAfter(index: Int): Int {
+        val since = decidedAt[items[index].key] ?: return 0
+        return status.count { (key, s) -> s != Status.NA_LIXEIRA && (decidedAt[key] ?: 0) > since }
+    }
+
+    /** Pending files whose grace period is over: they go to the trash now. */
+    val dueForTrash: List<Int>
+        get() = pending.filter { decisionsAfter(it) >= TRASH_DELAY }
 
     /** How many more decisions until file [index] goes to the trash. */
     fun trashIn(index: Int): Int = (TRASH_DELAY - decisionsAfter(index)).coerceAtLeast(0)
@@ -119,8 +129,8 @@ sealed interface UiMessage {
  *
  * ### The 2-file rule
  * A left swipe only marks the file as [Status.LIXEIRA_PENDENTE].
- * It actually goes to the trash once the cursor is [TRASH_DELAY] positions
- * past it. Until then, rewind undoes everything without the file ever having
+ * It actually goes to the trash once [TRASH_DELAY] more files have been
+ * decided after it. Until then, rewind undoes everything without the file ever having
  * moved.
  */
 class SwipeViewModel(
@@ -141,6 +151,16 @@ class SwipeViewModel(
     /** Short messages to show as toasts. */
     val messages: SharedFlow<UiMessage> = _messages.asSharedFlow()
 
+    /** Last decision stamp handed out; see [stamp]. */
+    private var lastStamp = 0L
+
+    /** Current time, but always later than the previous decision, even within the same millisecond. */
+    private fun stamp(): Long = maxOf(System.currentTimeMillis(), lastStamp + 1).also { lastStamp = it }
+
+    init {
+        load()
+    }
+
     private val _trashed = MutableSharedFlow<Int>(extraBufferCapacity = 8)
 
     /** Reports how many files just went to the trash, so the screen can vibrate. */
@@ -148,35 +168,56 @@ class SwipeViewModel(
 
     /**
      * Loads the folder and the saved decisions, and puts the cursor on the first
-     * unreviewed file. The screen calls this every time the folder is opened, to
-     * pick up files added or deleted elsewhere since last time.
+     * unreviewed file. Runs once per visit to the folder (the screen gets a new
+     * ViewModel every time the folder is opened) and after a reset.
      */
     fun load() {
         viewModelScope.launch {
             _ui.value = SwipeUi(loading = true)
 
             val found = container.media.items(folder)
-            val present = found.mapTo(HashSet()) { it.key }
+            val files = found.associateBy { it.key }
             val decisions = container.decisions.forFolder(folder.key)
+            val inFlight = container.trashInFlight
 
-            // "In trash" but still in the folder: the user restored the file from the
-            // gallery. The old decision is forgotten and it goes back into the queue.
-            val restored = decisions.filter { it.status == Status.NA_LIXEIRA && it.uri in present }
+            // A decision whose file now has a different size belongs to some
+            // other file that reused the MediaStore ID (the media database was
+            // rebuilt, or the app data came from another phone). It is dropped
+            // instead of being applied to a file the user never saw.
+            val (foreign, matching) = decisions.partition { d -> files[d.uri]?.let { it.size != d.size } == true }
+            foreign.forEach { container.decisions.delete(it.uri) }
+
+            // "In the trash" but still in the folder: the user restored it from the
+            // gallery. The old decision is forgotten and the file goes back in the queue.
+            val restored = matching.filter { it.status == Status.NA_LIXEIRA && it.uri in files && it.uri !in inFlight }
             restored.forEach { container.decisions.delete(it.uri) }
 
-            val status = decisions
-                .filter { it.uri in present && it !in restored }
-                .associate { it.uri to it.status }
+            // Marked for the trash and gone from the folder. Only judged when the
+            // folder's storage is mounted (an SD card may just be out).
+            if (container.media.isVolumeMounted(folder.volume)) {
+                matching
+                    .filter { it.status == Status.LIXEIRA_PENDENTE && it.uri !in files && it.uri !in inFlight }
+                    .forEach { d ->
+                        if (container.media.exists(Uri.parse(d.uri))) {
+                            // Moved to another folder: it was never trashed.
+                            container.decisions.delete(d.uri)
+                        } else {
+                            // The app died between the file going to the trash and
+                            // recording it. Record it now so the counters are right.
+                            container.decisions.upsert(d.copy(status = Status.NA_LIXEIRA))
+                        }
+                    }
+            }
 
-            // Marked for the trash and gone from the folder: the app died between the
-            // file going to the trash and recording it. Record it now so the counter
-            // and the "freed" total are right (and so the file, if restored
-            // later, hits the case above instead of going back to the trash).
-            decisions
-                .filter { it.status == Status.LIXEIRA_PENDENTE && it.uri !in present }
-                .forEach { container.decisions.setStatus(it.uri, Status.NA_LIXEIRA) }
-            val trashedEarlier = decisions.count {
-                it.uri !in present && (it.status == Status.NA_LIXEIRA || it.status == Status.LIXEIRA_PENDENTE)
+            val live = matching.filter { it.uri in files && it !in restored }
+            // A trash request still in progress (started before this load) counts
+            // as done, so it isn't sent a second time.
+            val status = live.associate { d -> d.uri to if (d.uri in inFlight) Status.NA_LIXEIRA else d.status }
+            val decidedAt = live.associate { it.uri to it.decidedAt }
+            lastStamp = maxOf(lastStamp, live.maxOfOrNull { it.decidedAt } ?: 0L)
+
+            val trashedEarlier = container.decisions.forFolder(folder.key).count {
+                it.status == Status.NA_LIXEIRA && it.uri !in files
             }
 
             // Undecided files that sit behind the point where the user left off
@@ -190,7 +231,14 @@ class SwipeViewModel(
                 rest.map { it.value } + late.map { it.value }
             }
 
-            val ui = SwipeUi(loading = false, items = items, status = status, trashedEarlier = trashedEarlier)
+            val ui = SwipeUi(
+                loading = false,
+                items = items,
+                status = status,
+                decidedAt = decidedAt,
+                appFavorited = live.filter { it.appFavorited }.mapTo(HashSet()) { it.uri },
+                trashedEarlier = trashedEarlier,
+            )
             _ui.value = ui.copy(cursor = ui.nextUndecided(0) ?: items.size)
 
             // If the app died mid-send, finish what was left behind.
@@ -216,19 +264,29 @@ class SwipeViewModel(
             Dir.LEFT -> Status.LIXEIRA_PENDENTE
         }
 
+        val at = stamp()
+        // Already a favorite before the swipe: nothing to ask the system for.
+        val setsFavorite = status == Status.FAVORITO && !file.isFavorite
+
         _ui.update { ui ->
-            val decided = ui.copy(status = ui.status + (file.key to status), enterFrom = null)
+            val decided = ui.copy(
+                status = ui.status + (file.key to status),
+                decidedAt = ui.decidedAt + (file.key to at),
+                appFavorited = if (setsFavorite) ui.appFavorited + file.key else ui.appFavorited,
+                enterFrom = null,
+                // Moving on: any gray cards from an earlier rewind are no longer relevant.
+                passedTrash = emptyList(),
+            )
             decided.copy(cursor = decided.nextUndecided(ui.cursor + 1) ?: ui.items.size)
         }
 
         viewModelScope.launch {
             container.decisions.upsert(
-                Decision(file.key, folder.key, status, file.size, System.currentTimeMillis()),
+                Decision(file.key, folder.key, status, file.size, at, appFavorited = setsFavorite),
             )
         }
 
-        // Already a favorite: nothing to ask the system for.
-        if (status == Status.FAVORITO && !file.isFavorite) {
+        if (setsFavorite) {
             container.appScope.launch {
                 val ok = runCatching {
                     SystemRequests.run(container.media.favoriteRequest(listOf(file.uri), true))
@@ -256,9 +314,13 @@ class SwipeViewModel(
         val previous = ui.statusOf(file)
         val skipped = (minOf(ui.cursor, ui.items.size) - 1 downTo target + 1).map { ui.items[it] }
 
+        val undoFavorite = previous == Status.FAVORITO && file.key in ui.appFavorited
+
         _ui.update {
             it.copy(
                 status = it.status - file.key,
+                decidedAt = it.decidedAt - file.key,
+                appFavorited = it.appFavorited - file.key,
                 cursor = target,
                 // Accumulates: rewinding to a thumbnail calls this function several times.
                 passedTrash = it.passedTrash + skipped,
@@ -274,8 +336,9 @@ class SwipeViewModel(
         viewModelScope.launch { container.decisions.delete(file.key) }
 
         // Only undo a favorite the app itself set; a favorite the file
-        // already had before the swipe stays put.
-        if (previous == Status.FAVORITO && !file.isFavorite) {
+        // already had before the swipe stays put. Stored in the database, so
+        // this holds across sessions too.
+        if (undoFavorite) {
             container.appScope.launch {
                 runCatching {
                     SystemRequests.run(container.media.favoriteRequest(listOf(file.uri), false))
@@ -316,35 +379,53 @@ class SwipeViewModel(
         }
     }
 
-    /** Sends to the trash every file that is already [TRASH_DELAY] positions behind the cursor. */
+    /** Sends to the trash every pending file whose grace period is over. */
     private fun commitDue() {
         val ui = _ui.value
-        val due = ui.pending
-            .filter { ui.decisionsAfter(it) >= TRASH_DELAY }
-            .map { ui.items[it] }
-        sendToTrash(due)
+        sendToTrash(ui.dueForTrash.map { ui.items[it] })
     }
 
-    private fun sendToTrash(files: List<MediaFile>) {
+    private fun sendToTrash(candidates: List<MediaFile>) {
+        // Never two requests for the same file at once (see AppContainer.trashInFlight).
+        val files = candidates.filter { container.trashInFlight.add(it.key) }
         if (files.isEmpty()) return
         val keys = files.map { it.key }
+        val stamps = _ui.value.decidedAt
 
         // Optimistic: the file leaves the trash queue right away, so rewind already skips it.
         _ui.update { ui -> ui.copy(status = ui.status + keys.associateWith { Status.NA_LIXEIRA }) }
 
         container.appScope.launch {
-            val ok = runCatching {
-                SystemRequests.run(container.media.trashRequest(files.map { it.uri }, true))
-            }.getOrDefault(false)
+            try {
+                val ok = runCatching {
+                    SystemRequests.run(container.media.trashRequest(files.map { it.uri }, true))
+                }.getOrDefault(false)
 
-            if (ok) {
-                _trashed.tryEmit(files.size)
-                keys.forEach { container.decisions.setStatus(it, Status.NA_LIXEIRA) }
-            } else {
-                // It didn't go: the file becomes "unreviewed" again and shows up later.
-                keys.forEach { container.decisions.delete(it) }
-                _ui.update { ui -> ui.copy(status = ui.status - keys.toSet()) }
-                _messages.tryEmit(UiMessage.TrashFailed(files.singleOrNull()?.name, files.size))
+                // Whatever the request said, what counts is where each file is now:
+                // a request reported as failed may still have gone through.
+                val (gone, stayed) = if (ok) {
+                    files to emptyList()
+                } else {
+                    files.partition { !container.media.exists(it.uri) }
+                }
+
+                // Written as full rows, so they land even if the folder was reset meanwhile.
+                gone.forEach { f ->
+                    container.decisions.upsert(
+                        Decision(f.key, folder.key, Status.NA_LIXEIRA, f.size, stamps[f.key] ?: stamp()),
+                    )
+                }
+                if (gone.isNotEmpty()) _trashed.tryEmit(gone.size)
+
+                if (stayed.isNotEmpty()) {
+                    // Still here: the file becomes "unreviewed" again and shows up later.
+                    stayed.forEach { container.decisions.delete(it.key) }
+                    val stayedKeys = stayed.map { it.key }.toSet()
+                    _ui.update { ui -> ui.copy(status = ui.status - stayedKeys, decidedAt = ui.decidedAt - stayedKeys) }
+                    _messages.tryEmit(UiMessage.TrashFailed(stayed.singleOrNull()?.name, stayed.size))
+                }
+            } finally {
+                container.trashInFlight.removeAll(keys.toSet())
             }
         }
     }

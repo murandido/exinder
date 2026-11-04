@@ -33,6 +33,12 @@ android {
     }
 }
 
+ksp {
+    // Every database version's schema is kept in the repository, so migrations
+    // can be written (and checked) against the exact previous schema.
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)

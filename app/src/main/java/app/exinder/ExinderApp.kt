@@ -3,6 +3,7 @@ package app.exinder
 import android.app.Application
 import androidx.room.Room
 import app.exinder.data.AppDatabase
+import app.exinder.data.MIGRATIONS
 import app.exinder.data.DecisionDao
 import app.exinder.data.MediaRepository
 import app.exinder.data.Prefs
@@ -13,6 +14,7 @@ import coil3.gif.AnimatedImageDecoder
 import coil3.request.crossfade
 import coil3.svg.SvgDecoder
 import coil3.video.VideoFrameDecoder
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -51,6 +53,7 @@ class AppContainer(app: Application) {
 
     val decisions: DecisionDao = Room
         .databaseBuilder(app, AppDatabase::class.java, "exinder.db")
+        .addMigrations(*MIGRATIONS)
         .build()
         .decisions()
 
@@ -63,4 +66,11 @@ class AppContainer(app: Application) {
      * so it isn't cancelled if the user switches screens halfway through.
      */
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    /**
+     * Keys of files with a trash request in progress, across the whole process.
+     * A folder reloaded while a request is still waiting (for example behind
+     * the system confirmation dialog) must not send the same file again.
+     */
+    val trashInFlight: MutableSet<String> = ConcurrentHashMap.newKeySet()
 }

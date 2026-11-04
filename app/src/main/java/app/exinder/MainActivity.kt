@@ -28,7 +28,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.viewmodel.compose.viewModel
 import app.exinder.data.FolderRef
 import app.exinder.data.SystemRequests
 import app.exinder.data.ThemeMode
@@ -74,6 +78,35 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/** Window background in dark mode; matches the night `windowBackground`. */
+private const val DARK_WINDOW = 0xFF111111.toInt()
+
+/**
+ * One [ViewModelStore] per folder visit. Each visit gets a fresh SwipeViewModel
+ * (so the folder is read again), the ViewModel survives Activity recreation
+ * (so a theme change doesn't reload the folder mid-request), and leaving the
+ * folder frees it (so ViewModels don't pile up for every folder ever opened).
+ */
+class ScreenStores : ViewModel() {
+    private val stores = mutableMapOf<String, ViewModelStore>()
+
+    fun ownerFor(key: String): ViewModelStoreOwner {
+        val store = stores.getOrPut(key) { ViewModelStore() }
+        return object : ViewModelStoreOwner {
+            override val viewModelStore = store
+        }
+    }
+
+    fun clear(key: String) {
+        stores.remove(key)?.clear()
+    }
+
+    override fun onCleared() {
+        stores.values.forEach { it.clear() }
+        stores.clear()
+    }
+}
+
 /** The app's screens. */
 private sealed interface Screen {
     data object Folders : Screen
@@ -95,7 +128,12 @@ private fun ExinderRoot(container: AppContainer) {
     // key of the open folder. It lives up here, before the permissions screen's
     // `return`s, so it isn't forgotten while that screen is showing.
     var saved by rememberSaveable { mutableStateOf<String?>(null) }
+    val stores: ScreenStores = viewModel()
     fun go(screen: Screen) {
+        // Leaving a folder frees its ViewModel; the next visit starts fresh.
+        saved?.takeIf { it.isNotEmpty() }?.let { leaving ->
+            if (screen !is Screen.Swipe || screen.folder.key != leaving) stores.clear(leaving)
+        }
         saved = when (screen) {
             Screen.Folders -> ""
             is Screen.Swipe -> screen.folder.key
@@ -157,6 +195,7 @@ private fun ExinderRoot(container: AppContainer) {
             SwipeScreen(
                 container = container,
                 folder = current.folder,
+                owner = stores.ownerFor(current.folder.key),
                 onChangeFolder = { go(Screen.Folders) },
             )
         }
