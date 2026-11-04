@@ -169,6 +169,13 @@ fun SwipeScreen(
         vm.messages.collect { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
     }
 
+    // Vibração curta quando um arquivo vai de fato para a lixeira, dois cards
+    // depois de marcado: o aviso de que aquele já não dá mais pra desfazer aqui.
+    val haptics = LocalHapticFeedback.current
+    LaunchedEffect(vm) {
+        vm.trashed.collect { haptics.performHapticFeedback(HapticFeedbackType.Reject) }
+    }
+
     Column(
         Modifier
             .fillMaxSize()

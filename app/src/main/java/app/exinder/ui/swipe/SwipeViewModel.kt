@@ -123,6 +123,11 @@ class SwipeViewModel(
     /** Avisos curtos para mostrar em toast. */
     val messages: SharedFlow<String> = _messages.asSharedFlow()
 
+    private val _trashed = MutableSharedFlow<Int>(extraBufferCapacity = 8)
+
+    /** Avisa quantos arquivos acabaram de ir para a lixeira, para a tela vibrar. */
+    val trashed: SharedFlow<Int> = _trashed.asSharedFlow()
+
     /**
      * Lê a pasta e as decisões salvas, e posiciona o cursor no primeiro
      * arquivo não revisado. A tela chama toda vez que a pasta é aberta, para
@@ -307,6 +312,7 @@ class SwipeViewModel(
             }.getOrDefault(false)
 
             if (ok) {
+                _trashed.tryEmit(files.size)
                 keys.forEach { container.decisions.setStatus(it, Status.NA_LIXEIRA) }
             } else {
                 // Não foi: o arquivo volta a ser "não revisado" e aparece de novo depois.
