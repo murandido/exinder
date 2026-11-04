@@ -27,10 +27,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.exinder.R
 import app.exinder.data.MediaFile
 import app.exinder.data.MediaKind
 import app.exinder.ui.theme.Brat
@@ -55,8 +57,8 @@ val CardShape = RoundedCornerShape(8.dp)
  *   even that one while the fullscreen viewer is open.
  * @param prepareVideo creates the player even when not playing, paused on the
  *   first frame (the back card, preloaded so it starts without delay).
- * @param stamps opacity of each stamp (MANTÉM, APAGA, FAVORITA: keep, delete,
- *   favorite), read every frame during the drag.
+ * @param stamps opacity of each stamp (KEEP, DELETE, FAVORITE), read every
+ *   frame during the drag.
  */
 @Composable
 fun MediaCard(
@@ -108,15 +110,15 @@ fun MediaCard(
 
         if (isTop) {
             Stamp(
-                "MANTÉM", Brat, -18f, { stamps().keep },
+                stringResource(R.string.stamp_keep), Brat, -18f, { stamps().keep },
                 Modifier.align(Alignment.TopStart).padding(start = 24.dp, top = 40.dp),
             )
             Stamp(
-                "APAGA", Nope, 18f, { stamps().trash },
+                stringResource(R.string.stamp_trash), Nope, 18f, { stamps().trash },
                 Modifier.align(Alignment.TopEnd).padding(end = 24.dp, top = 40.dp),
             )
             Stamp(
-                "FAVORITA", StarBlue, -8f, { stamps().favorite },
+                stringResource(R.string.stamp_favorite), StarBlue, -8f, { stamps().favorite },
                 Modifier.align(Alignment.BottomCenter).padding(bottom = 140.dp),
             )
         }
@@ -150,7 +152,7 @@ private fun CardMedia(file: MediaFile, playVideo: Boolean, prepareVideo: Boolean
                     tint = Color.White.copy(alpha = 0.6f),
                     modifier = Modifier.size(64.dp),
                 )
-                Text("não deu pra abrir esse arquivo", color = Color.White.copy(alpha = 0.6f))
+                Text(stringResource(R.string.card_error), color = Color.White.copy(alpha = 0.6f))
             }
         },
     )

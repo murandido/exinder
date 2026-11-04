@@ -38,10 +38,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.exinder.R
 import app.exinder.hasMediaPermission
 import app.exinder.hasPartialMediaAccess
 import app.exinder.mediaPermissions
@@ -96,7 +98,7 @@ fun PermissionsScreen(
         ExinderLogo(size = 64.sp)
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "faxina na galeria, um swipe por vez",
+            text = stringResource(R.string.tagline),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
@@ -104,24 +106,24 @@ fun PermissionsScreen(
 
         PermissionStep(
             icon = Icons.Rounded.PhotoLibrary,
-            title = "fotos e vídeos",
+            title = stringResource(R.string.perm_media_title),
             description = when {
                 // "Limited access": requesting again lets the user switch to "allow all".
-                partial -> "você liberou só algumas fotos; o app precisa ver a pasta inteira"
-                blocked -> "negada. libere em permissões > fotos e vídeos > permitir tudo"
-                else -> "pra montar a fila de cada pasta"
+                partial -> stringResource(R.string.perm_media_partial)
+                blocked -> stringResource(R.string.perm_media_blocked)
+                else -> stringResource(R.string.perm_media_desc)
             },
             granted = hasMedia,
-            action = if (blocked && !partial) "abrir ajustes" else "permitir",
+            action = stringResource(if (blocked && !partial) R.string.action_open_settings else R.string.action_allow),
             onAction = { if (blocked && !partial) openAppSettings() else requestMedia.launch(mediaPermissions()) },
         )
         Spacer(Modifier.height(12.dp))
         PermissionStep(
             icon = Icons.Rounded.DeleteSweep,
-            title = "gerenciamento de mídia",
-            description = "pra mandar pra lixeira sem o Android perguntar a cada arquivo",
+            title = stringResource(R.string.perm_manage_title),
+            description = stringResource(R.string.perm_manage_desc),
             granted = canManage,
-            action = "abrir ajustes",
+            action = stringResource(R.string.action_open_settings),
             onAction = {
                 context.startActivity(
                     Intent(
@@ -136,7 +138,7 @@ fun PermissionsScreen(
         if (hasMedia && !canManage) {
             Spacer(Modifier.height(16.dp))
             TextButton(onClick = onSkipManage) {
-                Text("seguir sem essa", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.action_skip_manage), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -176,7 +178,7 @@ private fun PermissionStep(
         if (granted) {
             Icon(
                 Icons.Rounded.CheckCircle,
-                contentDescription = "concedida",
+                contentDescription = stringResource(R.string.cd_granted),
                 tint = Brat,
                 modifier = Modifier.size(28.dp),
             )

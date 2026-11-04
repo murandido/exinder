@@ -33,6 +33,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -41,6 +43,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import app.exinder.R
 import app.exinder.AppContainer
 import app.exinder.data.FolderInfo
 import app.exinder.data.FolderRef
@@ -89,7 +92,7 @@ fun FoldersScreen(container: AppContainer, onOpen: (FolderRef) -> Unit) {
     ) {
         ExinderLogo(Modifier.padding(start = 16.dp, top = 8.dp))
         Text(
-            text = "escolha uma pasta",
+            text = stringResource(R.string.folders_title),
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 4.dp),
@@ -103,7 +106,7 @@ fun FoldersScreen(container: AppContainer, onOpen: (FolderRef) -> Unit) {
 
             list.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
-                    "nenhuma foto ou vídeo encontrado",
+                    stringResource(R.string.folders_empty),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -189,9 +192,9 @@ private fun FolderRow(folder: FolderInfo, onClick: () -> Unit) {
             Spacer(Modifier.height(4.dp))
             Text(
                 text = if (done) {
-                    "revisada · ${formatCount(folder.total)} arquivos"
+                    pluralStringResource(R.plurals.folder_reviewed, folder.total, formatCount(folder.total))
                 } else {
-                    "${formatCount(folder.remaining)} de ${formatCount(folder.total)} pra revisar"
+                    stringResource(R.string.folder_remaining, formatCount(folder.remaining), formatCount(folder.total))
                 },
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -201,7 +204,7 @@ private fun FolderRow(folder: FolderInfo, onClick: () -> Unit) {
         if (done) {
             Icon(
                 Icons.Rounded.CheckCircle,
-                contentDescription = "revisada",
+                contentDescription = stringResource(R.string.cd_reviewed),
                 tint = Brat,
                 modifier = Modifier.padding(start = 8.dp),
             )

@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
@@ -48,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import app.exinder.R
 import app.exinder.data.MediaFile
 import app.exinder.data.MediaKind
 import app.exinder.util.formatBytes
@@ -112,7 +114,7 @@ fun FullscreenViewer(file: MediaFile, onClose: () -> Unit) {
                 verticalAlignment = Alignment.Top,
             ) {
                 IconButton(onClick = onClose) {
-                    Icon(Icons.Rounded.Close, contentDescription = "fechar", tint = Color.White)
+                    Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.cd_close), tint = Color.White)
                 }
                 Column(Modifier.padding(top = 10.dp)) {
                     Text(

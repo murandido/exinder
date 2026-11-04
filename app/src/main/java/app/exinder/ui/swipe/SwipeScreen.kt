@@ -74,6 +74,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -84,6 +86,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.exinder.AppContainer
+import app.exinder.R
 import app.exinder.data.FolderRef
 import app.exinder.data.MediaFile
 import app.exinder.data.Status
@@ -173,7 +176,20 @@ fun SwipeScreen(
     var confirmReset by remember { mutableStateOf(false) }
 
     LaunchedEffect(vm) {
-        vm.messages.collect { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
+        vm.messages.collect { message ->
+            val text = when (message) {
+                is UiMessage.FavoriteFailed -> context.getString(R.string.msg_favorite_failed, message.name)
+                is UiMessage.TrashFailed -> context.getString(
+                    R.string.msg_trash_failed,
+                    message.name ?: context.resources.getQuantityString(
+                        R.plurals.files_count,
+                        message.count,
+                        formatCount(message.count),
+                    ),
+                )
+            }
+            Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+        }
     }
 
     // Short vibration when a file actually goes to the trash, two cards after
@@ -218,16 +234,16 @@ fun SwipeScreen(
     if (confirmReset) {
         AlertDialog(
             onDismissRequest = { confirmReset = false },
-            title = { Text("resetar ${folder.name}?") },
-            text = { Text("as decisões dessa pasta são esquecidas e a fila recomeça do início. nenhum arquivo é tocado.") },
+            title = { Text(stringResource(R.string.reset_title, folder.name)) },
+            text = { Text(stringResource(R.string.reset_text)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmReset = false
                     vm.resetFolder()
-                }) { Text("resetar", color = Nope) }
+                }) { Text(stringResource(R.string.action_reset), color = Nope) }
             },
             dismissButton = {
-                TextButton(onClick = { confirmReset = false }) { Text("cancelar") }
+                TextButton(onClick = { confirmReset = false }) { Text(stringResource(R.string.action_cancel)) }
             },
         )
     }
@@ -263,18 +279,18 @@ private fun TopBar(
         )
         Box {
             IconButton(onClick = { menu = true }) {
-                Icon(Icons.Rounded.MoreVert, contentDescription = "menu")
+                Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.cd_menu))
             }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                 DropdownMenuItem(
-                    text = { Text("trocar pasta") },
+                    text = { Text(stringResource(R.string.menu_change_folder)) },
                     onClick = {
                         menu = false
                         onChangeFolder()
                     },
                 )
                 DropdownMenuItem(
-                    text = { Text("resetar pasta") },
+                    text = { Text(stringResource(R.string.menu_reset_folder)) },
                     onClick = {
                         menu = false
                         onReset()
@@ -283,7 +299,7 @@ private fun TopBar(
                 // Each tap switches to the next: system → light → dark → system.
                 // The menu stays open, so the user can see the result and keep switching.
                 DropdownMenuItem(
-                    text = { Text("tema: ${theme.label}") },
+                    text = { Text(stringResource(R.string.menu_theme, stringResource(theme.label))) },
                     onClick = { onTheme(ThemeMode.entries[(theme.ordinal + 1) % ThemeMode.entries.size]) },
                 )
             }
@@ -300,13 +316,13 @@ private fun CounterRow(ui: SwipeUi, trash: TrashStats) {
             .padding(horizontal = 16.dp, vertical = 2.dp),
     ) {
         Text(
-            text = if (ui.items.isEmpty()) "" else "${formatCount(ui.position)} / ${formatCount(ui.total)}",
+            text = if (ui.items.isEmpty()) "" else stringResource(R.string.counter, formatCount(ui.position), formatCount(ui.total)),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 13.sp,
         )
         Spacer(Modifier.weight(1f))
         Text(
-            text = "${formatBytes(trash.bytes)} liberados",
+            text = stringResource(R.string.freed, formatBytes(trash.bytes)),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 13.sp,
         )
@@ -336,7 +352,7 @@ private fun ColumnScope.Deck(
     // Lock gestures while the card flies off, to guard against double taps.
     var busy by remember(top.key) { mutableStateOf(false) }
     // While a card returns from a rewind, the spring overshoots the center a bit;
-    // without this, a "kept" card would flash the APAGA (DELETE) stamp on its way back.
+    // without this, a "kept" card would flash the DELETE stamp on its way back.
     var entering by remember(top.key) { mutableStateOf(false) }
 
     // After a rewind, the card animates back in from the side it left.
@@ -509,7 +525,7 @@ private fun ColumnScope.Deck(
             }
         }
 
-        // Passing gray "na lixeira" (in trash) cards on top of the stack.
+        // Passing gray "in the trash" cards on top of the stack.
         ghost?.let { TrashedGhost(it.file, it.more, Modifier.fillMaxSize().graphicsLayer {
             translationX = ghostX.value
             alpha = ghostAlpha.value
@@ -529,8 +545,8 @@ private fun ColumnScope.Deck(
 }
 
 /**
- * Thumbnails of the files in the trash queue ("lixeira em 2", "lixeira em 1":
- * trash in 2, in 1). Tapping one rewinds to it. The height is fixed so the
+ * Thumbnails of the files in the trash queue ("trash in 2", "trash in 1").
+ * Tapping one rewinds to it. The height is fixed so the
  * screen doesn't jump.
  */
 @Composable
@@ -565,7 +581,7 @@ private fun PendingRow(ui: SwipeUi, enabled: Boolean, onRewindTo: (Int) -> Unit)
                         .border(2.dp, Nope, CircleShape),
                 )
                 Text(
-                    "lixeira em $left",
+                    stringResource(R.string.trash_in, left),
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 8.dp),
@@ -592,10 +608,10 @@ private fun ActionButtons(
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        RoundAction(Icons.Rounded.Replay, "rebobinar", RewindGold, 52.dp, { 0f }, canRewind, onRewind)
-        RoundAction(Icons.Rounded.Close, "apagar", Nope, 66.dp, { progress(Dir.LEFT) }, true, onTrash)
-        RoundAction(Icons.Rounded.Star, "favoritar", StarBlue, 52.dp, { progress(Dir.UP) }, true, onFavorite)
-        RoundAction(Icons.Rounded.Favorite, "manter", Brat, 66.dp, { progress(Dir.RIGHT) }, true, onKeep)
+        RoundAction(Icons.Rounded.Replay, stringResource(R.string.cd_rewind), RewindGold, 52.dp, { 0f }, canRewind, onRewind)
+        RoundAction(Icons.Rounded.Close, stringResource(R.string.cd_trash), Nope, 66.dp, { progress(Dir.LEFT) }, true, onTrash)
+        RoundAction(Icons.Rounded.Star, stringResource(R.string.cd_favorite), StarBlue, 52.dp, { progress(Dir.UP) }, true, onFavorite)
+        RoundAction(Icons.Rounded.Favorite, stringResource(R.string.cd_keep), Brat, 66.dp, { progress(Dir.RIGHT) }, true, onKeep)
     }
 }
 
@@ -645,9 +661,9 @@ private fun ColumnScope.EmptyState(onChangeFolder: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("nada pra revisar aqui", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.empty_folder), fontSize = 20.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(16.dp))
-        BratButton("escolher outra pasta", onChangeFolder)
+        BratButton(stringResource(R.string.action_pick_another), onChangeFolder)
     }
 }
 
@@ -671,7 +687,7 @@ private fun ColumnScope.Summary(
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            "acabou essa pasta",
+            stringResource(R.string.summary_title),
             fontFamily = Condensed,
             fontWeight = FontWeight.Bold,
             fontSize = 34.sp,
@@ -681,13 +697,13 @@ private fun ColumnScope.Summary(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             val kept = ui.count(Status.MANTER)
             val favorites = ui.count(Status.FAVORITO)
-            StatBlock(kept, if (kept == 1) "mantido" else "mantidos")
-            StatBlock(favorites, if (favorites == 1) "favorito" else "favoritos")
-            StatBlock(trash.count, "na lixeira")
+            StatBlock(kept, pluralStringResource(R.plurals.stat_kept, kept))
+            StatBlock(favorites, pluralStringResource(R.plurals.stat_favorites, favorites))
+            StatBlock(trash.count, stringResource(R.string.stat_in_trash))
         }
         Spacer(Modifier.height(16.dp))
         Text(
-            "${formatBytes(trash.bytes)} liberados",
+            stringResource(R.string.freed, formatBytes(trash.bytes)),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
@@ -703,23 +719,23 @@ private fun ColumnScope.Summary(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    if (pending == 1) "1 arquivo vai pra lixeira" else "$pending arquivos vão pra lixeira",
+                    pluralStringResource(R.plurals.summary_pending, pending, pending),
                     fontWeight = FontWeight.SemiBold,
                     textAlign = TextAlign.Center,
                 )
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedButton(onClick = { vm.rewind() }) { Text("voltar") }
+                    OutlinedButton(onClick = { vm.rewind() }) { Text(stringResource(R.string.action_back)) }
                     Button(
                         onClick = { vm.flushPending() },
                         colors = ButtonDefaults.buttonColors(containerColor = Nope, contentColor = Color.White),
-                    ) { Text("mandar agora", fontWeight = FontWeight.Bold) }
+                    ) { Text(stringResource(R.string.action_send_now), fontWeight = FontWeight.Bold) }
                 }
             }
         }
 
         Spacer(Modifier.height(28.dp))
-        BratButton("escolher outra pasta", onChangeFolder)
+        BratButton(stringResource(R.string.action_pick_another), onChangeFolder)
     }
 }
 
@@ -742,7 +758,7 @@ private fun BratButton(text: String, onClick: () -> Unit) {
 /** A passing gray card, and how many other trashed files were skipped with it. */
 private data class Ghost(val file: MediaFile, val more: Int)
 
-/** Gray "na lixeira" card: the photo in darkened black and white, inert. */
+/** Gray "in the trash" card: the photo in darkened black and white, inert. */
 @Composable
 private fun TrashedGhost(file: MediaFile, more: Int, modifier: Modifier = Modifier) {
     Box(
@@ -769,7 +785,7 @@ private fun TrashedGhost(file: MediaFile, more: Int, modifier: Modifier = Modifi
                 modifier = Modifier.size(48.dp),
             )
             Text(
-                "na lixeira",
+                stringResource(R.string.ghost_in_trash),
                 color = Color.White,
                 fontSize = 28.sp,
                 fontWeight = FontWeight.ExtraBold,
@@ -777,7 +793,7 @@ private fun TrashedGhost(file: MediaFile, more: Int, modifier: Modifier = Modifi
             )
             if (more > 0) {
                 Text(
-                    "e mais ${formatCount(more)}",
+                    stringResource(R.string.ghost_more, formatCount(more)),
                     color = Color.White.copy(alpha = 0.7f),
                     fontSize = 15.sp,
                 )

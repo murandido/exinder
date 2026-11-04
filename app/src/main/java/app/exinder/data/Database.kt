@@ -43,7 +43,7 @@ interface DecisionDao {
     /**
      * Files reviewed for good: kept or favorited. Files marked for the trash
      * that haven't gone yet count as "to review", so the folder doesn't show
-     * as done while files are waiting for "mandar agora" (send now).
+     * as done while files are waiting for "send now".
      */
     @Query("SELECT uri FROM decision WHERE status IN ('MANTER', 'FAVORITO')")
     suspend fun decidedUris(): List<String>

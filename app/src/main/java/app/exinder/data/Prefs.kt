@@ -1,6 +1,8 @@
 package app.exinder.data
 
 import android.content.Context
+import androidx.annotation.StringRes
+import app.exinder.R
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -11,10 +13,10 @@ import kotlinx.coroutines.flow.map
 private val Context.dataStore by preferencesDataStore(name = "prefs")
 
 /** Theme chosen in the menu. [SISTEMA] follows Android's light/dark mode. */
-enum class ThemeMode(val label: String) {
-    SISTEMA("igual ao sistema"),
-    CLARO("claro"),
-    ESCURO("escuro"),
+enum class ThemeMode(@StringRes val label: Int) {
+    SISTEMA(R.string.theme_system),
+    CLARO(R.string.theme_light),
+    ESCURO(R.string.theme_dark),
 }
 
 /** Small app preferences, stored with DataStore. */

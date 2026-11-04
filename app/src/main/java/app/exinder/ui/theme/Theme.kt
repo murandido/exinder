@@ -27,7 +27,7 @@ import androidx.compose.ui.unit.sp
 // The red, blue and yellow buttons match Tinder's so each action is
 // recognized instantly.
 
-/** Brat green: logo, keep button, MANTÉM (KEEP) stamp. */
+/** Brat green: logo, keep button, KEEP stamp. */
 val Brat = Color(0xFF8ACE00)
 
 /** Light end of the brand gradient. */
@@ -36,10 +36,10 @@ val BratLight = Color(0xFFB9F227)
 /** Text on top of the green. */
 val Ink = Color(0xFF000000)
 
-/** X button and APAGA (DELETE) stamp. */
+/** X button and DELETE stamp. */
 val Nope = Color(0xFFFF4458)
 
-/** Star button and FAVORITA (FAVORITE) stamp. */
+/** Star button and FAVORITE stamp. */
 val StarBlue = Color(0xFF2DB3FF)
 
 /** Rewind button. */

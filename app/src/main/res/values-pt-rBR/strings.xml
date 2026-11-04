@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Brazilian Portuguese. -->
+<resources>
+    <string name="tagline">faxina na galeria, um swipe por vez</string>
+    <string name="perm_media_title">fotos e vídeos</string>
+    <string name="perm_media_desc">pra montar a fila de cada pasta</string>
+    <string name="perm_media_partial">você liberou só algumas fotos; o app precisa ver a pasta inteira</string>
+    <string name="perm_media_blocked">negada. libere em permissões › fotos e vídeos › permitir tudo</string>
+    <string name="perm_manage_title">gerenciamento de mídia</string>
+    <string name="perm_manage_desc">pra mandar pra lixeira sem o Android perguntar a cada arquivo</string>
+    <string name="action_allow">permitir</string>
+    <string name="action_open_settings">abrir ajustes</string>
+    <string name="action_skip_manage">seguir sem essa</string>
+    <string name="cd_granted">concedida</string>
+    <string name="folders_title">escolha uma pasta</string>
+    <string name="folders_empty">nenhuma foto ou vídeo encontrado</string>
+    <string name="folder_remaining">%1$s de %2$s pra revisar</string>
+    <string name="cd_reviewed">revisada</string>
+    <string name="card_error">não deu pra abrir esse arquivo</string>
+    <string name="msg_favorite_failed">não deu pra favoritar %1$s</string>
+    <string name="msg_trash_failed">não deu pra mandar %1$s pra lixeira</string>
+    <string name="cd_close">fechar</string>
+    <string name="reset_title">resetar %1$s?</string>
+    <string name="reset_text">as decisões dessa pasta são esquecidas e a fila recomeça do início. nenhum arquivo é tocado.</string>
+    <string name="action_reset">resetar</string>
+    <string name="action_cancel">cancelar</string>
+    <string name="cd_menu">menu</string>
+    <string name="menu_change_folder">trocar pasta</string>
+    <string name="menu_reset_folder">resetar pasta</string>
+    <string name="menu_theme">tema: %1$s</string>
+    <string name="theme_system">igual ao sistema</string>
+    <string name="theme_light">claro</string>
+    <string name="theme_dark">escuro</string>
+    <string name="freed">%1$s liberados</string>
+    <string name="trash_in">lixeira em %1$d</string>
+    <string name="cd_rewind">rebobinar</string>
+    <string name="cd_trash">apagar</string>
+    <string name="cd_favorite">favoritar</string>
+    <string name="cd_keep">manter</string>
+    <string name="empty_folder">nada pra revisar aqui</string>
+    <string name="action_pick_another">escolher outra pasta</string>
+    <string name="summary_title">acabou essa pasta</string>
+    <string name="stat_in_trash">na lixeira</string>
+    <string name="action_back">voltar</string>
+    <string name="action_send_now">mandar agora</string>
+    <string name="ghost_in_trash">na lixeira</string>
+    <string name="ghost_more">e mais %1$s</string>
+    <string name="stamp_keep">MANTÉM</string>
+    <string name="stamp_trash">APAGA</string>
+    <string name="stamp_favorite">FAVORITA</string>
+    <plurals name="folder_reviewed">
+        <item quantity="one">revisada · %1$s arquivo</item>
+        <item quantity="other">revisada · %1$s arquivos</item>
+    </plurals>
+    <plurals name="files_count">
+        <item quantity="one">%1$s arquivo</item>
+        <item quantity="other">%1$s arquivos</item>
+    </plurals>
+    <plurals name="stat_kept">
+        <item quantity="one">mantido</item>
+        <item quantity="other">mantidos</item>
+    </plurals>
+    <plurals name="stat_favorites">
+        <item quantity="one">favorito</item>
+        <item quantity="other">favoritos</item>
+    </plurals>
+    <plurals name="summary_pending">
+        <item quantity="one">%1$d arquivo vai pra lixeira</item>
+        <item quantity="other">%1$d arquivos vão pra lixeira</item>
+    </plurals>
+</resources>

@@ -45,7 +45,7 @@ data class SwipeUi(
     val enterFrom: Dir? = null,
     /**
      * Already-trashed files the last rewind passed over, from nearest to
-     * farthest. The screen briefly shows each one as a gray "na lixeira" (in trash)
+     * farthest. The screen briefly shows each one as a gray "in the trash"
      * card, then clears the list.
      */
     val passedTrash: List<MediaFile> = emptyList(),
@@ -106,6 +106,14 @@ data class SwipeUi(
     fun nextUndecided(from: Int): Int? = (from until items.size).firstOrNull { statusOf(items[it]) == null }
 }
 
+/** A short message for the screen to show as a toast; the screen picks the text. */
+sealed interface UiMessage {
+    data class FavoriteFailed(val name: String) : UiMessage
+
+    /** [name] is set when a single file failed; otherwise [count] files did. */
+    data class TrashFailed(val name: String?, val count: Int) : UiMessage
+}
+
 /**
  * The heart of the app: a folder's queue, the decisions and the deferred trash.
  *
@@ -128,10 +136,10 @@ class SwipeViewModel(
         .trashStats(folder.key)
         .stateIn(viewModelScope, SharingStarted.Eagerly, TrashStats(0, 0))
 
-    private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 8)
+    private val _messages = MutableSharedFlow<UiMessage>(extraBufferCapacity = 8)
 
     /** Short messages to show as toasts. */
-    val messages: SharedFlow<String> = _messages.asSharedFlow()
+    val messages: SharedFlow<UiMessage> = _messages.asSharedFlow()
 
     private val _trashed = MutableSharedFlow<Int>(extraBufferCapacity = 8)
 
@@ -162,7 +170,7 @@ class SwipeViewModel(
 
             // Marked for the trash and gone from the folder: the app died between the
             // file going to the trash and recording it. Record it now so the counter
-            // and the "liberados" (freed) total are right (and so the file, if restored
+            // and the "freed" total are right (and so the file, if restored
             // later, hits the case above instead of going back to the trash).
             decisions
                 .filter { it.status == Status.LIXEIRA_PENDENTE && it.uri !in present }
@@ -225,7 +233,7 @@ class SwipeViewModel(
                 val ok = runCatching {
                     SystemRequests.run(container.media.favoriteRequest(listOf(file.uri), true))
                 }.getOrDefault(false)
-                if (!ok) _messages.tryEmit("não deu pra favoritar ${file.name}")
+                if (!ok) _messages.tryEmit(UiMessage.FavoriteFailed(file.name))
             }
         }
 
@@ -289,7 +297,7 @@ class SwipeViewModel(
         _ui.update { it.copy(enterFrom = null) }
     }
 
-    /** The screen reports that it has shown the gray "na lixeira" cards. */
+    /** The screen reports that it has shown the gray "in the trash" cards. */
     fun consumePassedTrash() {
         _ui.update { it.copy(passedTrash = emptyList()) }
     }
@@ -336,8 +344,7 @@ class SwipeViewModel(
                 // It didn't go: the file becomes "unreviewed" again and shows up later.
                 keys.forEach { container.decisions.delete(it) }
                 _ui.update { ui -> ui.copy(status = ui.status - keys.toSet()) }
-                val what = files.singleOrNull()?.name ?: "${files.size} arquivos"
-                _messages.tryEmit("não deu pra mandar $what pra lixeira")
+                _messages.tryEmit(UiMessage.TrashFailed(files.singleOrNull()?.name, files.size))
             }
         }
     }
