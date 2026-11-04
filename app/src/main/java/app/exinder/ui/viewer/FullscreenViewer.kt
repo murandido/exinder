@@ -30,8 +30,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -109,9 +111,15 @@ fun FullscreenViewer(file: MediaFile, onClose: () -> Unit) {
 private fun ZoomableImage(file: MediaFile) {
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
+    var size by remember { mutableStateOf(IntSize.Zero) }
     val state = rememberTransformableState { zoom, pan, _ ->
         scale = (scale * zoom).coerceIn(1f, 6f)
-        offset = if (scale == 1f) Offset.Zero else offset + pan
+        // O deslocamento fica limitado à sobra da imagem ampliada, para ela
+        // nunca sair inteira da tela; ao diminuir o zoom, o limite encolhe junto.
+        val maxX = size.width * (scale - 1f) / 2f
+        val maxY = size.height * (scale - 1f) / 2f
+        val moved = offset + pan
+        offset = Offset(moved.x.coerceIn(-maxX, maxX), moved.y.coerceIn(-maxY, maxY))
     }
 
     AsyncImage(
@@ -121,6 +129,7 @@ private fun ZoomableImage(file: MediaFile) {
         modifier = Modifier
             .fillMaxSize()
             .then(if (file.isSvg) Modifier.background(Color.White) else Modifier)
+            .onSizeChanged { size = it }
             .pointerInput(Unit) {
                 detectTapGestures(onDoubleTap = {
                     scale = 1f
