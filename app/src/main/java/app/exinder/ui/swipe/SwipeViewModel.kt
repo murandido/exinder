@@ -133,10 +133,7 @@ sealed interface UiMessage {
  * decided after it. Until then, rewind undoes everything without the file ever having
  * moved.
  */
-class SwipeViewModel(
-    private val container: AppContainer,
-    val folder: FolderRef,
-) : ViewModel() {
+class SwipeViewModel(private val container: AppContainer, val folder: FolderRef) : ViewModel() {
 
     private val _ui = MutableStateFlow(SwipeUi())
     val ui: StateFlow<SwipeUi> = _ui.asStateFlow()

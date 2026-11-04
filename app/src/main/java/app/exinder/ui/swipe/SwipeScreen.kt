@@ -3,8 +3,8 @@ package app.exinder.ui.swipe
 import android.widget.Toast
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutLinearInEasing
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -27,8 +27,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Replay
@@ -107,10 +107,10 @@ import app.exinder.util.formatCount
 import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.delay
 import kotlin.math.abs
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 // ─── Swipe physics ──────────────────────────────────────────────────────────
 
@@ -144,13 +144,12 @@ private fun zoneOf(x: Float, y: Float, size: IntSize): Dir? {
 }
 
 /** Decides at the end of the drag: by position or, if the gesture was fast, by velocity. */
-private fun releaseDir(x: Float, y: Float, vx: Float, vy: Float, size: IntSize): Dir? =
-    zoneOf(x, y, size) ?: when {
-        vy < -FLING_VELOCITY && abs(vy) > abs(vx) && y < 0 -> Dir.UP
-        vx > FLING_VELOCITY && x > 0 -> Dir.RIGHT
-        vx < -FLING_VELOCITY && x < 0 -> Dir.LEFT
-        else -> null
-    }
+private fun releaseDir(x: Float, y: Float, vx: Float, vy: Float, size: IntSize): Dir? = zoneOf(x, y, size) ?: when {
+    vy < -FLING_VELOCITY && abs(vy) > abs(vx) && y < 0 -> Dir.UP
+    vx > FLING_VELOCITY && x > 0 -> Dir.RIGHT
+    vx < -FLING_VELOCITY && x < 0 -> Dir.LEFT
+    else -> null
+}
 
 // ─── Screen ─────────────────────────────────────────────────────────────────
 
@@ -159,12 +158,7 @@ private fun releaseDir(x: Float, y: Float, vx: Float, vy: Float, size: IntSize):
  * queue and the Tinder-style round buttons.
  */
 @Composable
-fun SwipeScreen(
-    container: AppContainer,
-    folder: FolderRef,
-    owner: ViewModelStoreOwner,
-    onChangeFolder: () -> Unit,
-) {
+fun SwipeScreen(container: AppContainer, folder: FolderRef, owner: ViewModelStoreOwner, onChangeFolder: () -> Unit) {
     // Scoped to this visit to the folder (see ScreenStores): it loads the folder
     // when created and survives Activity recreation.
     val vm: SwipeViewModel = viewModel(viewModelStoreOwner = owner, key = folder.key) {
@@ -183,6 +177,7 @@ fun SwipeScreen(
         vm.messages.collect { message ->
             val text = when (message) {
                 is UiMessage.FavoriteFailed -> context.getString(R.string.msg_favorite_failed, message.name)
+
                 is UiMessage.TrashFailed -> context.getString(
                     R.string.msg_trash_failed,
                     message.name ?: context.resources.getQuantityString(
@@ -320,7 +315,15 @@ private fun CounterRow(ui: SwipeUi, trash: TrashStats) {
             .padding(horizontal = 16.dp, vertical = 2.dp),
     ) {
         Text(
-            text = if (ui.items.isEmpty()) "" else stringResource(R.string.counter, formatCount(ui.position), formatCount(ui.total)),
+            text = if (ui.items.isEmpty()) {
+                ""
+            } else {
+                stringResource(
+                    R.string.counter,
+                    formatCount(ui.position),
+                    formatCount(ui.total),
+                )
+            },
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 13.sp,
         )
@@ -340,12 +343,7 @@ private fun CounterRow(ui: SwipeUi, trash: TrashStats) {
  * coordinates don't shift along with the card.
  */
 @Composable
-private fun ColumnScope.Deck(
-    ui: SwipeUi,
-    vm: SwipeViewModel,
-    videoPaused: Boolean,
-    onOpen: (MediaFile) -> Unit,
-) {
+private fun ColumnScope.Deck(ui: SwipeUi, vm: SwipeViewModel, videoPaused: Boolean, onOpen: (MediaFile) -> Unit) {
     val top = ui.current ?: return
     val next = ui.next
     val scope = rememberCoroutineScope()
@@ -535,10 +533,16 @@ private fun ColumnScope.Deck(
         }
 
         // Passing gray "in the trash" cards on top of the stack.
-        ghost?.let { TrashedGhost(it.file, it.more, Modifier.fillMaxSize().graphicsLayer {
-            translationX = ghostX.value
-            alpha = ghostAlpha.value
-        }) }
+        ghost?.let {
+            TrashedGhost(
+                it.file,
+                it.more,
+                Modifier.fillMaxSize().graphicsLayer {
+                    translationX = ghostX.value
+                    alpha = ghostAlpha.value
+                },
+            )
+        }
     }
 
     PendingRow(ui, enabled = !busy, onRewindTo = vm::rewindTo)
@@ -617,10 +621,18 @@ private fun ActionButtons(
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        RoundAction(Icons.Rounded.Replay, stringResource(R.string.cd_rewind), RewindGold, 52.dp, { 0f }, canRewind, onRewind)
-        RoundAction(Icons.Rounded.Close, stringResource(R.string.cd_trash), Nope, 66.dp, { progress(Dir.LEFT) }, true, onTrash)
-        RoundAction(Icons.Rounded.Star, stringResource(R.string.cd_favorite), StarBlue, 52.dp, { progress(Dir.UP) }, true, onFavorite)
-        RoundAction(Icons.Rounded.Favorite, stringResource(R.string.cd_keep), Brat, 66.dp, { progress(Dir.RIGHT) }, true, onKeep)
+        RoundAction(Icons.Rounded.Replay, stringResource(R.string.cd_rewind), RewindGold, 52.dp, {
+            0f
+        }, canRewind, onRewind)
+        RoundAction(Icons.Rounded.Close, stringResource(R.string.cd_trash), Nope, 66.dp, {
+            progress(Dir.LEFT)
+        }, true, onTrash)
+        RoundAction(Icons.Rounded.Star, stringResource(R.string.cd_favorite), StarBlue, 52.dp, {
+            progress(Dir.UP)
+        }, true, onFavorite)
+        RoundAction(Icons.Rounded.Favorite, stringResource(R.string.cd_keep), Brat, 66.dp, {
+            progress(Dir.RIGHT)
+        }, true, onKeep)
     }
 }
 
@@ -681,12 +693,7 @@ private fun ColumnScope.EmptyState(onChangeFolder: () -> Unit) {
  * the confirmation to send them to the trash. Nothing goes without that tap.
  */
 @Composable
-private fun ColumnScope.Summary(
-    ui: SwipeUi,
-    trash: TrashStats,
-    vm: SwipeViewModel,
-    onChangeFolder: () -> Unit,
-) {
+private fun ColumnScope.Summary(ui: SwipeUi, trash: TrashStats, vm: SwipeViewModel, onChangeFolder: () -> Unit) {
     Column(
         Modifier
             .weight(1f)

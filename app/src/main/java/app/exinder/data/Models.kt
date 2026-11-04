@@ -12,10 +12,7 @@ import android.net.Uri
  * Subfolders are independent folders: `DCIM/` and `DCIM/Camera/` show up as
  * separate items in the list, and neither includes the other's files.
  */
-data class FolderRef(
-    val volume: String,
-    val relativePath: String,
-) {
+data class FolderRef(val volume: String, val relativePath: String) {
     /** Stable key used in the database and in preferences. */
     val key: String get() = "$volume|$relativePath"
 

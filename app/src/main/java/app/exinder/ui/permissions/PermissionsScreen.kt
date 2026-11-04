@@ -45,11 +45,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.ActivityCompat
 import app.exinder.R
 import app.exinder.hasMediaPermission
 import app.exinder.hasPartialMediaAccess
 import app.exinder.mediaPermissions
-import androidx.core.app.ActivityCompat
 import app.exinder.ui.theme.Brat
 import app.exinder.ui.theme.ExinderLogo
 import app.exinder.ui.theme.Ink
@@ -62,12 +62,7 @@ import app.exinder.ui.theme.Ink
  *    "move to trash?" for every file, which kills the swipe rhythm.
  */
 @Composable
-fun PermissionsScreen(
-    hasMedia: Boolean,
-    canManage: Boolean,
-    onRecheck: () -> Unit,
-    onSkipManage: () -> Unit,
-) {
+fun PermissionsScreen(hasMedia: Boolean, canManage: Boolean, onRecheck: () -> Unit, onSkipManage: () -> Unit) {
     val context = LocalContext.current
 
     // After two denials, Android stops showing the dialog and the request comes
@@ -129,7 +124,9 @@ fun PermissionsScreen(
             description = when {
                 // "Limited access": requesting again lets the user switch to "allow all".
                 partial -> stringResource(R.string.perm_media_partial)
+
                 blocked -> stringResource(R.string.perm_media_blocked)
+
                 else -> stringResource(R.string.perm_media_desc)
             },
             granted = hasMedia,

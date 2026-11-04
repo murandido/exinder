@@ -26,8 +26,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -110,15 +110,24 @@ fun MediaCard(
 
         if (isTop) {
             Stamp(
-                stringResource(R.string.stamp_keep), Brat, -18f, { stamps().keep },
+                stringResource(R.string.stamp_keep),
+                Brat,
+                -18f,
+                { stamps().keep },
                 Modifier.align(Alignment.TopStart).padding(start = 24.dp, top = 40.dp),
             )
             Stamp(
-                stringResource(R.string.stamp_trash), Nope, 18f, { stamps().trash },
+                stringResource(R.string.stamp_trash),
+                Nope,
+                18f,
+                { stamps().trash },
                 Modifier.align(Alignment.TopEnd).padding(end = 24.dp, top = 40.dp),
             )
             Stamp(
-                stringResource(R.string.stamp_favorite), StarBlue, -8f, { stamps().favorite },
+                stringResource(R.string.stamp_favorite),
+                StarBlue,
+                -8f,
+                { stamps().favorite },
                 Modifier.align(Alignment.BottomCenter).padding(bottom = 140.dp),
             )
         }
@@ -181,13 +190,7 @@ private fun KindBadge(kind: MediaKind, modifier: Modifier = Modifier) {
 
 /** Tilted stamp that appears as the card is dragged, like Tinder's LIKE / NOPE. */
 @Composable
-private fun Stamp(
-    text: String,
-    color: Color,
-    rotation: Float,
-    alpha: () -> Float,
-    modifier: Modifier = Modifier,
-) {
+private fun Stamp(text: String, color: Color, rotation: Float, alpha: () -> Float, modifier: Modifier = Modifier) {
     Text(
         text = text,
         color = color,

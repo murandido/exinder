@@ -3,8 +3,8 @@ package app.exinder
 import android.app.Application
 import androidx.room.Room
 import app.exinder.data.AppDatabase
-import app.exinder.data.MIGRATIONS
 import app.exinder.data.DecisionDao
+import app.exinder.data.MIGRATIONS
 import app.exinder.data.MediaRepository
 import app.exinder.data.Prefs
 import coil3.ImageLoader
@@ -25,7 +25,9 @@ import kotlinx.coroutines.SupervisorJob
  * Also configures Coil (the image loader) to decode animated GIFs and grab a
  * frame from videos to use as a thumbnail.
  */
-class ExinderApp : Application(), SingletonImageLoader.Factory {
+class ExinderApp :
+    Application(),
+    SingletonImageLoader.Factory {
 
     lateinit var container: AppContainer
         private set
@@ -35,15 +37,14 @@ class ExinderApp : Application(), SingletonImageLoader.Factory {
         container = AppContainer(this)
     }
 
-    override fun newImageLoader(context: PlatformContext): ImageLoader =
-        ImageLoader.Builder(context)
-            .components {
-                add(AnimatedImageDecoder.Factory())
-                add(VideoFrameDecoder.Factory())
-                add(SvgDecoder.Factory())
-            }
-            .crossfade(true)
-            .build()
+    override fun newImageLoader(context: PlatformContext): ImageLoader = ImageLoader.Builder(context)
+        .components {
+            add(AnimatedImageDecoder.Factory())
+            add(VideoFrameDecoder.Factory())
+            add(SvgDecoder.Factory())
+        }
+        .crossfade(true)
+        .build()
 }
 
 /**

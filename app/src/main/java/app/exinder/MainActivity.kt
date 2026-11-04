@@ -3,9 +3,9 @@ package app.exinder
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
-import android.os.Build
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -42,8 +42,8 @@ import app.exinder.ui.permissions.PermissionsScreen
 import app.exinder.ui.swipe.SwipeScreen
 import app.exinder.ui.theme.ExinderTheme
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 /** The app's only Activity. Navigation between screens is done in Compose. */
 class MainActivity : ComponentActivity() {
@@ -164,7 +164,10 @@ private fun ExinderRoot(container: AppContainer) {
         .background(MaterialTheme.colorScheme.background)
 
     // Still reading preferences: an empty frame, without flashing the permissions screen.
-    val skip = skipManage ?: run { Box(background); return }
+    val skip = skipManage ?: run {
+        Box(background)
+        return
+    }
 
     if (!hasMedia || (!canManage && !skip)) {
         PermissionsScreen(
@@ -211,23 +214,21 @@ private fun ExinderRoot(container: AppContainer) {
 }
 
 /** Read permissions that together grant full access. They were renamed in Android 13. */
-private fun fullAccessPermissions(): Array<String> =
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO)
-    } else {
-        arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
-    }
+private fun fullAccessPermissions(): Array<String> = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+    arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO)
+} else {
+    arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+}
 
 /**
  * What to request from the system. On Android 14+ this includes the "limited
  * access" permission, so the dialog works in normal mode (see the manifest).
  */
-fun mediaPermissions(): Array<String> =
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-        fullAccessPermissions() + Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED
-    } else {
-        fullAccessPermissions()
-    }
+fun mediaPermissions(): Array<String> = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+    fullAccessPermissions() + Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED
+} else {
+    fullAccessPermissions()
+}
 
 private fun granted(context: Context, permission: String): Boolean =
     ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
@@ -236,11 +237,9 @@ private fun granted(context: Context, permission: String): Boolean =
  * `true` only with full access. Android 14's "limited access" (picking
  * a few photos) isn't enough: the app needs to see the whole folder.
  */
-fun hasMediaPermission(context: Context): Boolean =
-    fullAccessPermissions().all { granted(context, it) }
+fun hasMediaPermission(context: Context): Boolean = fullAccessPermissions().all { granted(context, it) }
 
 /** The user chose "limited access": the app would only see the selected photos. */
-fun hasPartialMediaAccess(context: Context): Boolean =
-    Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
-        !hasMediaPermission(context) &&
-        granted(context, Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED)
+fun hasPartialMediaAccess(context: Context): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+    !hasMediaPermission(context) &&
+    granted(context, Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED)

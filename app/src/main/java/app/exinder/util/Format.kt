@@ -14,12 +14,10 @@ import java.util.Locale
 private val locale: Locale get() = Locale.getDefault()
 
 /** `14 Mar 2019`: the card's big line, Tinder's "name, age". */
-fun formatDate(ms: Long): String =
-    SimpleDateFormat("d MMM yyyy", locale).format(Date(ms)).replace(".", "")
+fun formatDate(ms: Long): String = SimpleDateFormat("d MMM yyyy", locale).format(Date(ms)).replace(".", "")
 
 /** `14 Mar 2019, 15:32`: used in the fullscreen viewer. */
-fun formatDateTime(ms: Long): String =
-    SimpleDateFormat("d MMM yyyy, HH:mm", locale).format(Date(ms)).replace(".", "")
+fun formatDateTime(ms: Long): String = SimpleDateFormat("d MMM yyyy, HH:mm", locale).format(Date(ms)).replace(".", "")
 
 /** `3.2 MB`, `1.4 GB`… (decimal separator follows the locale). */
 fun formatBytes(bytes: Long): String {

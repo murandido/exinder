@@ -3,30 +3,30 @@ package app.exinder.ui.viewer
 import android.net.Uri
 import android.view.LayoutInflater
 import androidx.annotation.OptIn
-import androidx.compose.runtime.Composable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.media3.common.AudioAttributes
-import androidx.media3.common.C
-import androidx.media3.common.PlaybackException
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.LifecycleStartEffect
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
@@ -48,12 +48,7 @@ import app.exinder.R
  */
 @OptIn(UnstableApi::class)
 @Composable
-fun LoopingVideo(
-    uri: Uri,
-    modifier: Modifier = Modifier,
-    controls: Boolean = false,
-    playing: Boolean = true,
-) {
+fun LoopingVideo(uri: Uri, modifier: Modifier = Modifier, controls: Boolean = false, playing: Boolean = true) {
     val context = LocalContext.current
 
     var failed by remember(uri) { mutableStateOf(false) }
@@ -71,19 +66,19 @@ fun LoopingVideo(
             )
             .setHandleAudioBecomingNoisy(controls)
             .build().apply {
-            addListener(
-                object : Player.Listener {
-                    override fun onPlayerError(error: PlaybackException) {
-                        failed = true
-                    }
-                },
-            )
-            setMediaItem(MediaItem.fromUri(uri))
-            repeatMode = Player.REPEAT_MODE_ONE
-            volume = if (controls) 1f else 0f
-            playWhenReady = playing
-            prepare()
-        }
+                addListener(
+                    object : Player.Listener {
+                        override fun onPlayerError(error: PlaybackException) {
+                            failed = true
+                        }
+                    },
+                )
+                setMediaItem(MediaItem.fromUri(uri))
+                repeatMode = Player.REPEAT_MODE_ONE
+                volume = if (controls) 1f else 0f
+                playWhenReady = playing
+                prepare()
+            }
     }
     DisposableEffect(player) {
         onDispose { player.release() }

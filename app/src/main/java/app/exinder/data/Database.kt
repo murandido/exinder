@@ -42,10 +42,7 @@ data class Decision(
 )
 
 /** Summary of what has already gone to the trash in a folder. */
-data class TrashStats(
-    val count: Int,
-    val bytes: Long,
-)
+data class TrashStats(val count: Int, val bytes: Long)
 
 @Dao
 interface DecisionDao {

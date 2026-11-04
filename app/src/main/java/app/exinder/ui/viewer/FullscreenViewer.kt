@@ -3,14 +3,9 @@ package app.exinder.ui.viewer
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.input.pointer.PointerEventPass
-import kotlin.math.abs
-import kotlinx.coroutines.launch
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
@@ -29,8 +24,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,6 +35,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
@@ -56,6 +54,8 @@ import app.exinder.util.formatBytes
 import app.exinder.util.formatDateTime
 import app.exinder.util.formatDuration
 import coil3.compose.AsyncImage
+import kotlin.math.abs
+import kotlinx.coroutines.launch
 
 /**
  * Fullscreen view opened by tapping the card: pinch-to-zoom photo, animated GIF
@@ -114,7 +114,11 @@ fun FullscreenViewer(file: MediaFile, onClose: () -> Unit) {
                 verticalAlignment = Alignment.Top,
             ) {
                 IconButton(onClick = onClose) {
-                    Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.cd_close), tint = Color.White)
+                    Icon(
+                        Icons.Rounded.Close,
+                        contentDescription = stringResource(R.string.cd_close),
+                        tint = Color.White,
+                    )
                 }
                 Column(Modifier.padding(top = 10.dp)) {
                     Text(
