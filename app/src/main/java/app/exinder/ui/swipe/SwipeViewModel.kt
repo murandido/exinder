@@ -43,7 +43,19 @@ data class SwipeUi(
     val cursor: Int = 0,
     /** Preenchido logo após um rebobinar, para o card voltar animando do lado certo. */
     val enterFrom: Dir? = null,
+    /**
+     * Arquivos desta pasta mandados para a lixeira em sessões anteriores. Eles
+     * já não aparecem em [items], mas entram no contador "N / total" para o
+     * total não encolher a cada vez que o app é aberto.
+     */
+    val trashedEarlier: Int = 0,
 ) {
+    /** Total de arquivos da pasta, contando os que já foram para a lixeira. */
+    val total: Int get() = trashedEarlier + items.size
+
+    /** Posição do card na tela dentro de [total], começando em 1. */
+    val position: Int get() = trashedEarlier + minOf(cursor + 1, items.size)
+
     fun statusOf(file: MediaFile): Status? = status[file.key]
 
     /** O card de cima da pilha. */
@@ -106,11 +118,13 @@ class SwipeViewModel(
 
             val items = container.media.items(folder)
             val present = items.mapTo(HashSet()) { it.key }
-            val status = container.decisions.forFolder(folder.key)
+            val decisions = container.decisions.forFolder(folder.key)
+            val status = decisions
                 .filter { it.uri in present }
                 .associate { it.uri to it.status }
+            val trashedEarlier = decisions.count { it.status == Status.NA_LIXEIRA && it.uri !in present }
 
-            val ui = SwipeUi(loading = false, items = items, status = status)
+            val ui = SwipeUi(loading = false, items = items, status = status, trashedEarlier = trashedEarlier)
             _ui.value = ui.copy(cursor = ui.nextUndecided(0) ?: items.size)
 
             // Se o app morreu no meio de um envio, termina o que ficou para trás.

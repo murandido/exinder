@@ -263,9 +263,8 @@ private fun CounterRow(ui: SwipeUi, trash: TrashStats) {
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 2.dp),
     ) {
-        val total = ui.items.size
         Text(
-            text = if (total == 0) "" else "${formatCount(minOf(ui.cursor + 1, total))} / ${formatCount(total)}",
+            text = if (ui.items.isEmpty()) "" else "${formatCount(ui.position)} / ${formatCount(ui.total)}",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 13.sp,
         )
