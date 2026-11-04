@@ -199,7 +199,11 @@ private fun FolderRow(folder: FolderInfo, onClick: () -> Unit) {
                 text = if (done) {
                     pluralStringResource(R.plurals.folder_reviewed, folder.reviewTotal, formatCount(folder.reviewTotal))
                 } else {
-                    stringResource(R.string.folder_remaining, formatCount(folder.remaining), formatCount(folder.reviewTotal))
+                    stringResource(
+                        R.string.folder_remaining,
+                        formatCount(folder.remaining),
+                        formatCount(folder.reviewTotal),
+                    )
                 },
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

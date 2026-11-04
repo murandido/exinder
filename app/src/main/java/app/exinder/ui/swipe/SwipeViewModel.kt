@@ -4,11 +4,11 @@ import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.exinder.AppContainer
+import app.exinder.TrashResult
 import app.exinder.data.Decision
 import app.exinder.data.FolderRef
 import app.exinder.data.MediaFile
 import app.exinder.data.Status
-import app.exinder.TrashResult
 import app.exinder.data.SystemRequests
 import app.exinder.data.TrashStats
 import kotlinx.coroutines.channels.Channel
@@ -205,7 +205,9 @@ class SwipeViewModel(private val container: AppContainer, val folder: FolderRef)
             // Decisions are matched by file, not only by folder: a kept file moved
             // here from another folder keeps its decision, which moves along with it.
             val all = container.decisions.all()
-            val movedIn = all.filter { it.folderKey != folder.key && it.uri in files }.map { it.copy(folderKey = folder.key) }
+            val movedIn = all.filter {
+                it.folderKey != folder.key && it.uri in files
+            }.map { it.copy(folderKey = folder.key) }
             movedIn.forEach { container.decisions.upsert(it) }
             val decisions = all.filter { it.folderKey == folder.key } + movedIn
 
@@ -230,9 +232,11 @@ class SwipeViewModel(private val container: AppContainer, val folder: FolderRef)
                         when (container.media.exists(d.uri.toUri())) {
                             // Moved to another folder: it was never trashed.
                             true -> container.decisions.delete(d.uri)
+
                             // The app died between the file going to the trash and
                             // recording it. Record it now so the counters are right.
                             false -> container.decisions.upsert(d.copy(status = Status.NA_LIXEIRA))
+
                             // Couldn't tell: leave the record alone and decide next time.
                             null -> Unit
                         }

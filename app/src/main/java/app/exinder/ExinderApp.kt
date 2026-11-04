@@ -88,8 +88,4 @@ class AppContainer(app: Application) {
  * How a trash request for a folder ended: [trashed] files went to the trash,
  * [stayed] are still on the device (the request was denied or failed).
  */
-data class TrashResult(
-    val folderKey: String,
-    val trashed: Int,
-    val stayed: List<MediaFile>,
-)
+data class TrashResult(val folderKey: String, val trashed: Int, val stayed: List<MediaFile>)

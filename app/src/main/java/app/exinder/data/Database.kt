@@ -42,10 +42,7 @@ data class Decision(
 )
 
 /** A count per folder ([FolderRef.key]). */
-data class FolderCount(
-    val folderKey: String,
-    val count: Int,
-)
+data class FolderCount(val folderKey: String, val count: Int)
 
 /** Summary of what has already gone to the trash in a folder. */
 data class TrashStats(val count: Int, val bytes: Long)
