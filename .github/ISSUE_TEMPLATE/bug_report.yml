@@ -1,0 +1,45 @@
+name: Bug report
+description: Something doesn't work as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. If a file went to the trash when it shouldn't have, restore it from your gallery's trash first: it is deleted for good after about 30 days.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open folder ...
+        2. Swipe left on ...
+        3. ...
+  - type: checkboxes
+    id: data
+    attributes:
+      label: Data loss
+      options:
+        - label: A file ended up in the trash that I did not swipe left on
+  - type: input
+    id: device
+    attributes:
+      label: Device and Android version
+      placeholder: Pixel 9, Android 16
+    validations:
+      required: true
+  - type: dropdown
+    id: manage-media
+    attributes:
+      label: Is the "Media management" permission on?
+      options: ["Yes", "No", "Not sure"]
+  - type: input
+    id: version
+    attributes:
+      label: App version or commit
