@@ -83,6 +83,7 @@ import app.exinder.AppContainer
 import app.exinder.data.FolderRef
 import app.exinder.data.MediaFile
 import app.exinder.data.Status
+import app.exinder.data.ThemeMode
 import app.exinder.data.TrashStats
 import app.exinder.ui.theme.Brat
 import app.exinder.ui.theme.Condensed
@@ -158,6 +159,8 @@ fun SwipeScreen(
     val ui by vm.ui.collectAsStateWithLifecycle()
     val trash by vm.trashStats.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val theme by container.prefs.theme.collectAsStateWithLifecycle(initialValue = ThemeMode.SISTEMA)
 
     var fullscreen by remember { mutableStateOf<MediaFile?>(null) }
     var confirmReset by remember { mutableStateOf(false) }
@@ -174,6 +177,8 @@ fun SwipeScreen(
     ) {
         TopBar(
             folder = folder,
+            theme = theme,
+            onTheme = { mode -> scope.launch { container.prefs.setTheme(mode) } },
             onChangeFolder = onChangeFolder,
             onReset = { confirmReset = true },
         )
@@ -216,7 +221,13 @@ fun SwipeScreen(
 
 /** Logo à esquerda; nome da pasta e menu à direita. */
 @Composable
-private fun TopBar(folder: FolderRef, onChangeFolder: () -> Unit, onReset: () -> Unit) {
+private fun TopBar(
+    folder: FolderRef,
+    theme: ThemeMode,
+    onTheme: (ThemeMode) -> Unit,
+    onChangeFolder: () -> Unit,
+    onReset: () -> Unit,
+) {
     var menu by remember { mutableStateOf(false) }
     Row(
         Modifier
@@ -254,6 +265,12 @@ private fun TopBar(folder: FolderRef, onChangeFolder: () -> Unit, onReset: () ->
                         menu = false
                         onReset()
                     },
+                )
+                // Um toque troca para o próximo: sistema → claro → escuro → sistema.
+                // O menu fica aberto, para ver o resultado e seguir trocando.
+                DropdownMenuItem(
+                    text = { Text("tema: ${theme.label}") },
+                    onClick = { onTheme(ThemeMode.entries[(theme.ordinal + 1) % ThemeMode.entries.size]) },
                 )
             }
         }

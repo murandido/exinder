@@ -85,10 +85,12 @@ val Condensed: FontFamily = FontFamily(Typeface.create("sans-serif-condensed", T
  *
  * As telas pintam o fundo com `Modifier.background` em vez de `Surface`, então
  * a cor padrão do texto é definida aqui; sem isso ela ficaria preta no modo escuro.
+ *
+ * @param dark escuro ou claro; por padrão segue o sistema.
  */
 @Composable
-fun ExinderTheme(content: @Composable () -> Unit) {
-    val colors = if (isSystemInDarkTheme()) DarkColors else LightColors
+fun ExinderTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
+    val colors = if (dark) DarkColors else LightColors
     MaterialTheme(colorScheme = colors) {
         CompositionLocalProvider(LocalContentColor provides colors.onBackground, content = content)
     }

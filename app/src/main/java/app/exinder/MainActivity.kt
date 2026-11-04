@@ -4,12 +4,15 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -28,6 +31,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import app.exinder.data.FolderRef
 import app.exinder.data.SystemRequests
+import app.exinder.data.ThemeMode
 import app.exinder.ui.folders.FoldersScreen
 import app.exinder.ui.permissions.PermissionsScreen
 import app.exinder.ui.swipe.SwipeScreen
@@ -46,7 +50,19 @@ class MainActivity : ComponentActivity() {
 
         val container = (application as ExinderApp).container
         setContent {
-            ExinderTheme {
+            val mode by container.prefs.theme.collectAsState(initial = ThemeMode.SISTEMA)
+            val dark = when (mode) {
+                ThemeMode.SISTEMA -> isSystemInDarkTheme()
+                ThemeMode.CLARO -> false
+                ThemeMode.ESCURO -> true
+            }
+            // Ícones da barra de status e de navegação acompanham o tema do app,
+            // que pode ser diferente do tema do sistema.
+            LaunchedEffect(dark) {
+                val style = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) { dark }
+                enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
+            }
+            ExinderTheme(dark) {
                 ExinderRoot(container)
             }
         }

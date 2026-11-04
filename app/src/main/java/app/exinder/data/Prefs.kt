@@ -10,11 +10,28 @@ import kotlinx.coroutines.flow.map
 
 private val Context.dataStore by preferencesDataStore(name = "prefs")
 
+/** Tema escolhido no menu. [SISTEMA] segue o modo claro/escuro do Android. */
+enum class ThemeMode(val label: String) {
+    SISTEMA("igual ao sistema"),
+    CLARO("claro"),
+    ESCURO("escuro"),
+}
+
 /** Preferências pequenas do app, guardadas com DataStore. */
 class Prefs(private val context: Context) {
 
     private val lastFolderKey = stringPreferencesKey("last_folder")
     private val skipManageMediaKey = booleanPreferencesKey("skip_manage_media")
+    private val themeKey = stringPreferencesKey("theme")
+
+    /** Tema do app; padrão: igual ao sistema. */
+    val theme: Flow<ThemeMode> = context.dataStore.data.map { prefs ->
+        prefs[themeKey]?.let { saved -> ThemeMode.entries.firstOrNull { it.name == saved } } ?: ThemeMode.SISTEMA
+    }
+
+    suspend fun setTheme(mode: ThemeMode) {
+        context.dataStore.edit { prefs -> prefs[themeKey] = mode.name }
+    }
 
     /** Última pasta aberta, para o app voltar direto nela. */
     val lastFolder: Flow<FolderRef?> =
