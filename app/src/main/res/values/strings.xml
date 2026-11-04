@@ -15,6 +15,7 @@
     <string name="cd_granted">granted</string>
     <string name="folders_title">pick a folder</string>
     <string name="folders_empty">no photos or videos found</string>
+    <string name="sd_card_path">SD card · %1$s</string>
     <string name="folder_remaining">%1$s of %2$s to review</string>
     <string name="cd_reviewed">reviewed</string>
     <string name="video_error">couldn\'t play this video</string>

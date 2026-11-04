@@ -1,5 +1,6 @@
 package app.exinder.ui.folders
 
+import android.provider.MediaStore
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -172,8 +173,11 @@ private fun FolderRow(folder: FolderInfo, onClick: () -> Unit) {
             )
             // Truncate at the start: the end of the path is what tells apart folders
             // with the same name (e.g. the two "WhatsApp Images").
+            // Folders on an SD card say so: the same path can exist on both volumes.
+            val onCard = folder.ref.volume != MediaStore.VOLUME_EXTERNAL_PRIMARY
+            val path = folder.ref.relativePath.trimEnd('/')
             Text(
-                folder.ref.relativePath.trimEnd('/'),
+                if (onCard) stringResource(R.string.sd_card_path, path) else path,
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,

@@ -14,6 +14,7 @@
     <string name="cd_granted">concedida</string>
     <string name="folders_title">escolha uma pasta</string>
     <string name="folders_empty">nenhuma foto ou vídeo encontrado</string>
+    <string name="sd_card_path">cartão SD · %1$s</string>
     <string name="folder_remaining">%1$s de %2$s pra revisar</string>
     <string name="cd_reviewed">revisada</string>
     <string name="video_error">não deu pra tocar esse vídeo</string>
