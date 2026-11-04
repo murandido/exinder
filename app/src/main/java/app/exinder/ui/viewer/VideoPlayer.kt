@@ -12,6 +12,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -83,9 +85,28 @@ fun LoopingVideo(uri: Uri, modifier: Modifier = Modifier, controls: Boolean = fa
     DisposableEffect(player) {
         onDispose { player.release() }
     }
-    LifecycleStartEffect(player, playing) {
-        if (playing) player.play() else player.pause()
-        onStopOrDispose { player.pause() }
+    // Where the video was and whether it was playing when the app went to the
+    // background. A full screen video the user paused (or that paused because
+    // headphones were unplugged) stays paused when the app comes back.
+    var resumeAt by remember(player) { mutableLongStateOf(0L) }
+    var resumePlaying by remember(player) { mutableStateOf(true) }
+    LifecycleStartEffect(player) {
+        if (player.playbackState == Player.STATE_IDLE) {
+            player.prepare()
+            player.seekTo(resumeAt)
+        }
+        if (controls) player.playWhenReady = resumePlaying
+        onStopOrDispose {
+            resumeAt = player.currentPosition
+            resumePlaying = player.playWhenReady
+            // Lets go of the decoders while the app is in the background (they are
+            // a limited resource other apps may need); prepare() brings them back.
+            player.stop()
+        }
+    }
+    // The card videos follow [playing]: the top card plays, the back card waits.
+    if (!controls) {
+        LaunchedEffect(player, playing) { player.playWhenReady = playing }
     }
 
     Box(modifier) {
@@ -108,7 +129,9 @@ fun LoopingVideo(uri: Uri, modifier: Modifier = Modifier, controls: Boolean = fa
         )
         // A file that can't be played (corrupt, unsupported codec, no free
         // decoder) says so instead of leaving a black screen.
-        if (failed) {
+        // Only in full screen: on the card, the image layer below already shows
+        // its own error when the file is broken, and two messages would overlap.
+        if (failed && controls) {
             Text(
                 stringResource(R.string.video_error),
                 color = Color.White.copy(alpha = 0.8f),
