@@ -22,10 +22,12 @@ fun formatBytes(bytes: Long): String {
     val kb = 1024.0
     val mb = kb * 1024
     val gb = mb * 1024
+    // Os limites ficam um pouco abaixo da unidade seguinte, para o arredondamento
+    // não produzir "1024 KB" ou "1024,0 MB" em vez de "1,0 MB" ou "1,0 GB".
     return when {
         bytes < kb -> "$bytes B"
-        bytes < mb -> String.format(ptBR, "%.0f KB", bytes / kb)
-        bytes < gb -> String.format(ptBR, "%.1f MB", bytes / mb)
+        bytes < mb - kb / 2 -> String.format(ptBR, "%.0f KB", bytes / kb)
+        bytes < gb - mb / 20 -> String.format(ptBR, "%.1f MB", bytes / mb)
         else -> String.format(ptBR, "%.1f GB", bytes / gb)
     }
 }

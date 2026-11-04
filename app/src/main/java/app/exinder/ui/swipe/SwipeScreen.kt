@@ -591,8 +591,10 @@ private fun ColumnScope.Summary(
         )
         Spacer(Modifier.height(28.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            StatBlock(ui.count(Status.MANTER), "mantidos")
-            StatBlock(ui.count(Status.FAVORITO), "favoritos")
+            val kept = ui.count(Status.MANTER)
+            val favorites = ui.count(Status.FAVORITO)
+            StatBlock(kept, if (kept == 1) "mantido" else "mantidos")
+            StatBlock(favorites, if (favorites == 1) "favorito" else "favoritos")
             StatBlock(trash.count, "na lixeira")
         }
         Spacer(Modifier.height(16.dp))
