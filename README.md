@@ -109,6 +109,8 @@ The APK ends up in `app/build/outputs/apk/debug/app-debug.apk`. To install it st
 ./gradlew installDebug
 ```
 
+For a much smaller APK (about 4 MB instead of 70 MB), build the release variant with `./gradlew assembleRelease`. There is no release key in the repository, so it is signed with your local debug key: fine for installing your own build, not for publishing.
+
 Every CI run on `main` also uploads the debug APK as a build artifact.
 
 ### Language
@@ -143,6 +145,9 @@ app/src/main/java/app/exinder/
 │   ├── swipe/               # card stack, gestures and the 2-file rule
 │   └── viewer/              # video player and full screen viewer
 └── util/Format.kt           # dates, sizes and numbers
+
+app/src/test/                # unit tests for the trash queue rules and formatting
+app/schemas/                 # Room database schema, one file per version
 ```
 
 The original requirements document is in [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md).
