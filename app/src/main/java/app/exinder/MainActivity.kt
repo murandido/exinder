@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -41,6 +42,7 @@ import app.exinder.ui.permissions.PermissionsScreen
 import app.exinder.ui.swipe.SwipeScreen
 import app.exinder.ui.theme.ExinderTheme
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.launch
 
 /** The app's only Activity. Navigation between screens is done in Compose. */
@@ -53,8 +55,11 @@ class MainActivity : ComponentActivity() {
         SystemRequests.attach(this)
 
         val container = (application as ExinderApp).container
+        // Read once, synchronously, so the first frame already has the saved
+        // theme instead of flashing the system one. It is a tiny local file.
+        val savedTheme = runBlocking { container.prefs.theme.first() }
         setContent {
-            val mode by container.prefs.theme.collectAsState(initial = ThemeMode.SISTEMA)
+            val mode by container.prefs.theme.collectAsState(initial = savedTheme)
             val dark = when (mode) {
                 ThemeMode.SISTEMA -> isSystemInDarkTheme()
                 ThemeMode.CLARO -> false
@@ -65,6 +70,9 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(dark) {
                 val style = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) { dark }
                 enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
+                // The window background (seen briefly during transitions) follows
+                // the app's theme too, not the system's.
+                window.setBackgroundDrawable(ColorDrawable(if (dark) DARK_WINDOW else Color.WHITE))
             }
             ExinderTheme(dark) {
                 ExinderRoot(container)
