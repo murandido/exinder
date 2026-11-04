@@ -5,6 +5,7 @@ import androidx.room.Room
 import app.exinder.data.AppDatabase
 import app.exinder.data.DecisionDao
 import app.exinder.data.MIGRATIONS
+import app.exinder.data.MediaFile
 import app.exinder.data.MediaRepository
 import app.exinder.data.Prefs
 import coil3.ImageLoader
@@ -18,6 +19,7 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableSharedFlow
 
 /**
  * Process entry point.
@@ -74,4 +76,20 @@ class AppContainer(app: Application) {
      * the system confirmation dialog) must not send the same file again.
      */
     val trashInFlight: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
+    /**
+     * Outcome of every trash request, for whichever ViewModel shows the folder
+     * when it finishes (the one that started it may be gone by then).
+     */
+    val trashResults = MutableSharedFlow<TrashResult>(extraBufferCapacity = 64)
 }
+
+/**
+ * How a trash request for a folder ended: [trashed] files went to the trash,
+ * [stayed] are still on the device (the request was denied or failed).
+ */
+data class TrashResult(
+    val folderKey: String,
+    val trashed: Int,
+    val stayed: List<MediaFile>,
+)

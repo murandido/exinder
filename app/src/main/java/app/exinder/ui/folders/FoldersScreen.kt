@@ -67,7 +67,8 @@ class FoldersViewModel(private val container: AppContainer) : ViewModel() {
     fun load() {
         viewModelScope.launch {
             val decided = container.decisions.decidedUris().toSet()
-            _folders.value = container.media.folders(decided)
+            val trashed = container.decisions.trashedPerFolder().associate { it.folderKey to it.count }
+            _folders.value = container.media.folders(decided, trashed)
         }
     }
 }
@@ -126,7 +127,7 @@ fun FoldersScreen(container: AppContainer, onOpen: (FolderRef) -> Unit) {
 /** A list row: thumbnail, name, path and progress bar. */
 @Composable
 private fun FolderRow(folder: FolderInfo, onClick: () -> Unit) {
-    val reviewed = folder.total - folder.remaining
+    val reviewed = folder.reviewTotal - folder.remaining
     val done = folder.remaining == 0
 
     Row(
@@ -180,7 +181,7 @@ private fun FolderRow(folder: FolderInfo, onClick: () -> Unit) {
             )
             Spacer(Modifier.height(6.dp))
             LinearProgressIndicator(
-                progress = { if (folder.total == 0) 0f else reviewed.toFloat() / folder.total },
+                progress = { if (folder.reviewTotal == 0) 0f else reviewed.toFloat() / folder.reviewTotal },
                 color = Brat,
                 trackColor = MaterialTheme.colorScheme.background,
                 drawStopIndicator = {},
@@ -192,9 +193,9 @@ private fun FolderRow(folder: FolderInfo, onClick: () -> Unit) {
             Spacer(Modifier.height(4.dp))
             Text(
                 text = if (done) {
-                    pluralStringResource(R.plurals.folder_reviewed, folder.total, formatCount(folder.total))
+                    pluralStringResource(R.plurals.folder_reviewed, folder.reviewTotal, formatCount(folder.reviewTotal))
                 } else {
-                    stringResource(R.string.folder_remaining, formatCount(folder.remaining), formatCount(folder.total))
+                    stringResource(R.string.folder_remaining, formatCount(folder.remaining), formatCount(folder.reviewTotal))
                 },
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

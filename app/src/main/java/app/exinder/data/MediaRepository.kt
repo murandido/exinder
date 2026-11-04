@@ -35,8 +35,9 @@ class MediaRepository(private val context: Context) {
      * Lists every folder that has media, with how many files are left to review.
      *
      * @param decided keys ([MediaFile.key]) of the files that already have a decision.
+     * @param trashed how many files each folder ([FolderRef.key]) has sent to the trash.
      */
-    suspend fun folders(decided: Set<String>): List<FolderInfo> = withContext(Dispatchers.IO) {
+    suspend fun folders(decided: Set<String>, trashed: Map<String, Int>): List<FolderInfo> = withContext(Dispatchers.IO) {
         // Per-folder accumulator, filled in a single pass over the cursor.
         class Acc {
             var total = 0
@@ -84,7 +85,7 @@ class MediaRepository(private val context: Context) {
         }
 
         byFolder
-            .map { (ref, acc) -> FolderInfo(ref, acc.total, acc.remaining, acc.cover ?: acc.anyUri) }
+            .map { (ref, acc) -> FolderInfo(ref, acc.total, acc.remaining, acc.cover ?: acc.anyUri, trashed[ref.key] ?: 0) }
             .sortedBy { it.ref.relativePath.lowercase() }
     }
 
@@ -167,10 +168,12 @@ class MediaRepository(private val context: Context) {
      * are hidden by default, so a trashed file counts as missing, while a file
      * moved to another folder (same ID, new path) still exists.
      */
-    suspend fun exists(uri: Uri): Boolean = withContext(Dispatchers.IO) {
+    suspend fun exists(uri: Uri): Boolean? = withContext(Dispatchers.IO) {
+        // `null` when MediaStore can't answer (no permission, provider error):
+        // callers must not read that as "gone".
         runCatching {
-            resolver.query(uri, arrayOf(MediaColumns._ID), null, null, null)?.use { it.count > 0 } ?: false
-        }.getOrDefault(false)
+            resolver.query(uri, arrayOf(MediaColumns._ID), null, null, null)?.use { it.count > 0 }
+        }.getOrNull()
     }
 
     /** `true` if the storage volume (internal storage, an SD card) is currently mounted. */

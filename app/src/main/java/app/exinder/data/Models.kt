@@ -39,7 +39,15 @@ data class FolderInfo(
     val remaining: Int,
     /** Folder thumbnail: the oldest file not yet reviewed. */
     val cover: Uri?,
-)
+    /** Files from this folder the app already sent to the trash (no longer in [total]). */
+    val trashed: Int = 0,
+) {
+    /**
+     * The folder's size as the swipe screen counts it: what's there now plus
+     * what went to the trash, so both screens show the same total.
+     */
+    val reviewTotal: Int get() = total + trashed
+}
 
 /** Media types the app can show on a card. */
 enum class MediaKind { IMAGE, GIF, VIDEO }
