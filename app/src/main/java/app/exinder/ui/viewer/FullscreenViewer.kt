@@ -39,6 +39,8 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -54,6 +56,7 @@ import app.exinder.util.formatBytes
 import app.exinder.util.formatDateTime
 import app.exinder.util.formatDuration
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
 import kotlin.math.abs
 import kotlinx.coroutines.launch
 
@@ -161,8 +164,15 @@ private fun ZoomableImage(file: MediaFile, onZoomed: (Boolean) -> Unit) {
         offset = Offset(moved.x.coerceIn(-maxX, maxX), moved.y.coerceIn(-maxY, maxY))
     }
 
+    // Decoded at twice the screen size, so zooming in shows real detail (to
+    // judge sharpness) instead of magnifying a screen-sized bitmap. Twice, not
+    // the original: a 50 MP photo at full size could run out of memory.
+    val screen = LocalWindowInfo.current.containerSize
     AsyncImage(
-        model = file.uri,
+        model = ImageRequest.Builder(LocalContext.current)
+            .data(file.uri)
+            .size(screen.width * 2, screen.height * 2)
+            .build(),
         contentDescription = file.name,
         contentScale = ContentScale.Fit,
         modifier = Modifier
