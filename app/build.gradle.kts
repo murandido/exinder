@@ -81,4 +81,43 @@ dependencies {
     implementation(libs.coil.gif)
     implementation(libs.coil.video)
     implementation(libs.coil.svg)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.mockk)
+}
+
+// ─── ktlint ──────────────────────────────────────────────────────────────────
+// Run through the ktlint CLI rather than a Gradle plugin, so it doesn't depend
+// on the Kotlin Gradle plugin (this project uses AGP's built-in Kotlin).
+// The rules come from the root .editorconfig.
+
+val ktlint: Configuration by configurations.creating
+
+dependencies {
+    ktlint(libs.ktlint.cli) {
+        attributes {
+            attribute(Bundling.BUNDLING_ATTRIBUTE, objects.named(Bundling.EXTERNAL))
+        }
+    }
+}
+
+val ktlintSources = listOf("app/src/**/*.kt", "**/*.kts", "!**/build/**")
+
+tasks.register<JavaExec>("ktlintCheck") {
+    group = "verification"
+    description = "Checks Kotlin code style with ktlint."
+    classpath = ktlint
+    mainClass.set("com.pinterest.ktlint.Main")
+    workingDir = rootDir
+    args(ktlintSources)
+}
+
+tasks.register<JavaExec>("ktlintFormat") {
+    group = "formatting"
+    description = "Fixes Kotlin code style with ktlint."
+    classpath = ktlint
+    mainClass.set("com.pinterest.ktlint.Main")
+    jvmArgs("--add-opens=java.base/java.lang=ALL-UNNAMED")
+    workingDir = rootDir
+    args(listOf("-F") + ktlintSources)
 }
