@@ -26,7 +26,7 @@ O app monta a fila da pasta **do arquivo mais antigo para o mais novo** e mostra
 | ⟵ arrastar para a esquerda | ✕ | marca para **mandar pra lixeira** |
 | ↑ arrastar para cima | ★ | **favorita** (mantém e marca como favorito no Android) |
 | — | ↺ | **rebobina** um card e desfaz a decisão |
-| tocar no card | — | abre em **tela cheia** (zoom, vídeo com som) |
+| tocar no card | — | abre em **tela cheia** (zoom, vídeo com som; arrastar para baixo fecha) |
 
 ### A regra dos 2 arquivos
 
@@ -49,6 +49,10 @@ E mesmo depois disso, o arquivo vai para a **lixeira do Android**, não é apaga
 
 - **UI do Tinder em verde brat**: pilha de cards, carimbos MANTÉM / APAGA / FAVORITA, botões que acendem conforme o arraste.
 - **Fotos, GIFs animados e vídeos** tocando em loop dentro do card.
+- **Pré-carregamento**: o vídeo do card de trás já fica pronto e começa a tocar assim que ele vira o da frente.
+- **Rebobinar mostra o que já foi**: arquivos que já estão na lixeira passam como cards cinza "na lixeira".
+- **Tela cheia** com zoom de pinça; arrastar para baixo fecha.
+- **Tema claro, escuro ou igual ao sistema**, escolhido no menu.
 - **Progresso salvo por pasta**: feche o app no meio e volte no mesmo card, com o buffer intacto.
 - **Cada subpasta é uma pasta separada** na lista, com a barra de progresso da revisão.
 - **Sem confirmação a cada arquivo**: com a permissão *Gerenciamento de mídia*, o Android não pergunta nada.
