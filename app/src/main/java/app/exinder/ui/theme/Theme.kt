@@ -1,7 +1,10 @@
 package app.exinder.ui.theme
 
 import android.graphics.Typeface
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -97,18 +100,25 @@ fun ExinderTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () 
 }
 
 /**
- * O logo "exinder": minúsculo, condensado e levemente desfocado, como a capa
- * do *brat*.
+ * O logo "exinder", como a capa do *brat*: texto preto, minúsculo, condensado
+ * e levemente desfocado, sobre um bloco verde.
  */
 @Composable
 fun ExinderLogo(modifier: Modifier = Modifier, size: TextUnit = 30.sp) {
-    Text(
-        text = "exinder",
-        color = Brat,
-        fontFamily = Condensed,
-        fontWeight = FontWeight.Bold,
-        fontSize = size,
-        letterSpacing = (-1).sp,
-        modifier = modifier.blur(0.6.dp, BlurredEdgeTreatment.Unbounded),
-    )
+    Box(
+        modifier
+            .background(Brat)
+            // Respiro proporcional ao tamanho do texto, igual em todos os tamanhos.
+            .padding(horizontal = (size.value * 0.28f).dp, vertical = (size.value * 0.04f).dp),
+    ) {
+        Text(
+            text = "exinder",
+            color = Ink,
+            fontFamily = Condensed,
+            fontWeight = FontWeight.Bold,
+            fontSize = size,
+            letterSpacing = (-1).sp,
+            modifier = Modifier.blur((size.value / 50f).dp, BlurredEdgeTreatment.Unbounded),
+        )
+    }
 }
