@@ -33,6 +33,7 @@ The app builds a queue of the folder's files **from oldest to newest** and shows
 | ↑ swipe up | ★ | **favorite** it (keep, and mark it as a favorite in Android) |
 | — | ↺ | **rewind** one card and undo the decision |
 | tap the card | — | open it **full screen** (zoom, video with sound; drag down to close) |
+| — | share icon | **share** it with any app (on the top card and in full screen) |
 
 ### The 2-file rule
 
@@ -58,6 +59,7 @@ Even then, the file goes to the **Android trash**, not straight to deletion: it 
 - **Preloading:** the next card's video player is already prepared, and the card after that is decoded ahead of time.
 - **Rewind shows what's gone:** files sent to the trash during the current visit to a folder pass by as grey "in the trash" cards.
 - **Full screen** with pinch to zoom; drag down to close.
+- **Share** a photo or video you want to send to someone, straight from the card or the full screen view, through Android's share sheet.
 - **Progress saved per folder:** close the app midway and come back to the same card, with the trash queue intact.
 - **Each subfolder is its own folder** in the list, with a review progress bar.
 - **No confirmation for every file:** with the *Media management* permission, Android doesn't ask each time.
