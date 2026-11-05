@@ -13,19 +13,24 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
@@ -56,6 +61,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -91,6 +97,7 @@ import app.exinder.AppContainer
 import app.exinder.R
 import app.exinder.data.FolderRef
 import app.exinder.data.MediaFile
+import app.exinder.data.MediaKind
 import app.exinder.data.Status
 import app.exinder.data.ThemeMode
 import app.exinder.data.TrashStats
@@ -104,12 +111,16 @@ import app.exinder.ui.theme.StarBlue
 import app.exinder.ui.viewer.FullscreenViewer
 import app.exinder.util.formatBytes
 import app.exinder.util.formatCount
+import app.exinder.util.shareMedia
 import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import coil3.size.Precision
+import coil3.size.Scale
 import kotlin.math.abs
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 // ─── Swipe physics ──────────────────────────────────────────────────────────
@@ -265,17 +276,20 @@ private fun TopBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         ExinderLogo()
-        Spacer(Modifier.weight(1f))
-        Text(
-            folder.name,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 15.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier
-                .widthIn(max = 180.dp)
-                .clickable(onClick = onChangeFolder),
-        )
+        // The folder name takes whatever room is left and shrinks first, so the
+        // menu button keeps its size even with a long name and large fonts.
+        Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
+            Text(
+                folder.name,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 15.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .padding(start = 12.dp)
+                    .clickable(onClick = onChangeFolder),
+            )
+        }
         Box {
             IconButton(onClick = { menu = true }) {
                 Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.cd_menu))
@@ -306,7 +320,7 @@ private fun TopBar(
     }
 }
 
-/** `1.234 / 5.678` on the left, `2,3 GB liberados` (freed) on the right. */
+/** `1,234 / 5,678` on the left, `2.3 GB freed` on the right. */
 @Composable
 private fun CounterRow(ui: SwipeUi, trash: TrashStats) {
     Row(
@@ -361,10 +375,13 @@ private fun ColumnScope.Deck(ui: SwipeUi, vm: SwipeViewModel, videoPaused: Boole
     LaunchedEffect(top.key) {
         val from = ui.enterFrom ?: return@LaunchedEffect
         vm.consumeEnter()
+        // A freshly shown stack (coming back from the summary) hasn't been
+        // measured yet; wait for its size so the card has somewhere to come from.
+        val size = snapshotFlow { area }.first { it != IntSize.Zero }
         when (from) {
-            Dir.LEFT -> motion.x.snapTo(-area.width * 1.5f)
-            Dir.RIGHT -> motion.x.snapTo(area.width * 1.5f)
-            Dir.UP -> motion.y.snapTo(-area.height * 1.5f)
+            Dir.LEFT -> motion.x.snapTo(-size.width * 1.5f)
+            Dir.RIGHT -> motion.x.snapTo(size.width * 1.5f)
+            Dir.UP -> motion.y.snapTo(-size.height * 1.5f)
         }
         entering = true
         try {
@@ -388,7 +405,8 @@ private fun ColumnScope.Deck(ui: SwipeUi, vm: SwipeViewModel, videoPaused: Boole
     val ghostAlpha = remember { Animatable(0f) }
     LaunchedEffect(ui.passedTrash) {
         val passed = ui.passedTrash
-        if (passed.isEmpty() || area == IntSize.Zero) return@LaunchedEffect
+        if (passed.isEmpty()) return@LaunchedEffect
+        snapshotFlow { area }.first { it != IntSize.Zero }
         // The list is only cleared at the end: clearing it changes this effect's key,
         // which would cancel the animation midway. A new rewind during the animation
         // restarts the effect with the accumulated list, and the `finally` keeps a
@@ -440,14 +458,27 @@ private fun ColumnScope.Deck(ui: SwipeUi, vm: SwipeViewModel, videoPaused: Boole
     val context = LocalContext.current
     val third = ui.afterNext
     LaunchedEffect(third?.key, area) {
-        if (third == null || area == IntSize.Zero) return@LaunchedEffect
+        // Animated GIFs aren't kept in Coil's memory cache, so decoding one ahead
+        // of time would only be thrown away.
+        if (third == null || area == IntSize.Zero || third.kind == MediaKind.GIF) return@LaunchedEffect
         SingletonImageLoader.get(context).enqueue(
-            ImageRequest.Builder(context).data(third.uri).size(area.width, area.height).build(),
+            ImageRequest.Builder(context)
+                .data(third.uri)
+                .size(area.width, area.height)
+                // Same scale and precision the card's image will ask for, so the
+                // cached result is accepted instead of decoded again.
+                .scale(if (third.isSvg) Scale.FIT else Scale.FILL)
+                .precision(Precision.INEXACT)
+                .build(),
         )
     }
 
     // Short vibration when crossing a decision threshold.
-    val zone by remember(top.key) { derivedStateOf { zoneOf(motion.x.value, motion.y.value, area) } }
+    // Not while a rewound card flies back in: it starts past a threshold, which
+    // would buzz as if the user had dragged it there.
+    val zone by remember(top.key) {
+        derivedStateOf { if (entering) null else zoneOf(motion.x.value, motion.y.value, area) }
+    }
     LaunchedEffect(zone) {
         if (zone != null) haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
     }
@@ -509,6 +540,12 @@ private fun ColumnScope.Deck(ui: SwipeUi, vm: SwipeViewModel, videoPaused: Boole
                     // the full screen viewer is open: then they let go of their
                     // decoders, which are a limited resource on some phones.
                     prepareVideo = !videoPaused,
+                    // Share only from the top card, and not while it is flying out.
+                    onShare = if (isTop) {
+                        { if (!busy) shareMedia(context, file) }
+                    } else {
+                        null
+                    },
                     stamps = { Stamps(progress(Dir.RIGHT), progress(Dir.LEFT), progress(Dir.UP)) },
                     modifier = Modifier
                         .fillMaxSize()
@@ -585,7 +622,12 @@ private fun PendingRow(ui: SwipeUi, enabled: Boolean, onRewindTo: (Int) -> Unit)
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 AsyncImage(
-                    model = file.uri,
+                    // Cached under its own key: the same URI's card-sized image
+                    // stays in the cache for when the user rewinds to it.
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(file.uri)
+                        .memoryCacheKey("${file.key}#thumb")
+                        .build(),
                     contentDescription = file.name,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
@@ -694,66 +736,83 @@ private fun ColumnScope.EmptyState(onChangeFolder: () -> Unit) {
  */
 @Composable
 private fun ColumnScope.Summary(ui: SwipeUi, trash: TrashStats, vm: SwipeViewModel, onChangeFolder: () -> Unit) {
-    Column(
-        Modifier
-            .weight(1f)
-            .fillMaxWidth()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(
-            stringResource(R.string.summary_title),
-            fontFamily = Condensed,
-            fontWeight = FontWeight.Bold,
-            fontSize = 34.sp,
-            color = Brat,
-        )
-        Spacer(Modifier.height(28.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            val kept = ui.count(Status.MANTER)
-            val favorites = ui.count(Status.FAVORITO)
-            StatBlock(kept, pluralStringResource(R.plurals.stat_kept, kept))
-            StatBlock(favorites, pluralStringResource(R.plurals.stat_favorites, favorites))
-            StatBlock(trash.count, stringResource(R.string.stat_in_trash))
-        }
-        Spacer(Modifier.height(16.dp))
-        Text(
-            stringResource(R.string.freed, formatBytes(trash.bytes)),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        val pending = ui.pending.size
-        if (pending > 0) {
+    // Centered when it fits, scrollable when it doesn't (large fonts, small screens).
+    BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+        Column(
+            Modifier
+                .verticalScroll(rememberScrollState())
+                .fillMaxWidth()
+                .heightIn(min = maxHeight)
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                stringResource(R.string.summary_title),
+                fontFamily = Condensed,
+                fontWeight = FontWeight.Bold,
+                fontSize = 34.sp,
+                // The theme's green: brat green itself is too faint as text on white.
+                color = MaterialTheme.colorScheme.primary,
+            )
             Spacer(Modifier.height(28.dp))
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Nope.copy(alpha = 0.12f))
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
+            // Wraps to a second line instead of squeezing big numbers.
+            FlowRow(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text(
-                    pluralStringResource(R.plurals.summary_pending, pending, pending),
-                    fontWeight = FontWeight.SemiBold,
-                    textAlign = TextAlign.Center,
-                )
-                Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedButton(onClick = { vm.rewind() }) { Text(stringResource(R.string.action_back)) }
-                    Button(
-                        onClick = { vm.flushPending() },
-                        colors = ButtonDefaults.buttonColors(containerColor = Nope, contentColor = Color.White),
-                    ) { Text(stringResource(R.string.action_send_now), fontWeight = FontWeight.Bold) }
+                val kept = ui.count(Status.MANTER)
+                val favorites = ui.count(Status.FAVORITO)
+                StatBlock(kept, pluralStringResource(R.plurals.stat_kept, labelCount(kept)))
+                StatBlock(favorites, pluralStringResource(R.plurals.stat_favorites, labelCount(favorites)))
+                StatBlock(trash.count, stringResource(R.string.stat_in_trash))
+            }
+            Spacer(Modifier.height(16.dp))
+            Text(
+                stringResource(R.string.freed, formatBytes(trash.bytes)),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            val pending = ui.pending.size
+            if (pending > 0) {
+                Spacer(Modifier.height(28.dp))
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Nope.copy(alpha = 0.12f))
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        pluralStringResource(R.plurals.summary_pending, pending, pending),
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedButton(onClick = { vm.rewind() }) { Text(stringResource(R.string.action_back)) }
+                        Button(
+                            onClick = { vm.flushPending() },
+                            colors = ButtonDefaults.buttonColors(containerColor = Nope, contentColor = Color.White),
+                        ) { Text(stringResource(R.string.action_send_now), fontWeight = FontWeight.Bold) }
+                    }
                 }
             }
-        }
 
-        Spacer(Modifier.height(28.dp))
-        BratButton(stringResource(R.string.action_pick_another), onChangeFolder)
+            Spacer(Modifier.height(28.dp))
+            BratButton(stringResource(R.string.action_pick_another), onChangeFolder)
+        }
     }
 }
+
+/**
+ * Quantity used to pick a label's plural form. Zero reads as plural in both
+ * languages ("0 favorites", "0 favoritos"), but Portuguese grammar files put 0
+ * in the singular group, which would print "0 favorito".
+ */
+private fun labelCount(n: Int): Int = if (n == 0) 2 else n
 
 @Composable
 private fun StatBlock(value: Int, label: String) {
@@ -779,7 +838,6 @@ private data class Ghost(val file: MediaFile, val more: Int)
 private fun TrashedGhost(file: MediaFile, more: Int, modifier: Modifier = Modifier) {
     Box(
         modifier
-            .padding(horizontal = 8.dp, vertical = 6.dp)
             .clip(CardShape)
             .background(Color(0xFF2A2C31)),
         contentAlignment = Alignment.Center,

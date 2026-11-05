@@ -2,9 +2,11 @@ package app.exinder.ui.swipe
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,12 +18,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.BrokenImage
 import androidx.compose.material.icons.rounded.Gif
 import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -59,6 +63,7 @@ val CardShape = RoundedCornerShape(8.dp)
  *   first frame (the back card, preloaded so it starts without delay).
  * @param stamps opacity of each stamp (KEEP, DELETE, FAVORITE), read every
  *   frame during the drag.
+ * @param onShare shows a share button in the corner when set (top card only).
  */
 @Composable
 fun MediaCard(
@@ -68,6 +73,7 @@ fun MediaCard(
     prepareVideo: Boolean,
     stamps: () -> Stamps,
     modifier: Modifier = Modifier,
+    onShare: (() -> Unit)? = null,
 ) {
     Box(modifier.background(Color.Black)) {
         CardMedia(file, playVideo, prepareVideo)
@@ -106,7 +112,13 @@ fun MediaCard(
             )
         }
 
-        KindBadge(file.kind, Modifier.align(Alignment.TopEnd).padding(12.dp))
+        Row(
+            Modifier.align(Alignment.TopEnd).padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            if (onShare != null) ShareButton(onShare)
+            KindBadge(file.kind)
+        }
 
         if (isTop) {
             Stamp(
@@ -185,6 +197,26 @@ private fun KindBadge(kind: MediaKind, modifier: Modifier = Modifier) {
         contentAlignment = Alignment.Center,
     ) {
         Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+    }
+}
+
+/** Round share button, same look as [KindBadge] but tappable. */
+@Composable
+private fun ShareButton(onClick: () -> Unit) {
+    Box(
+        Modifier
+            .size(34.dp)
+            .clip(CircleShape)
+            .background(Color.Black.copy(alpha = 0.45f))
+            .clickable(onClickLabel = stringResource(R.string.cd_share), onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            Icons.Rounded.Share,
+            contentDescription = stringResource(R.string.cd_share),
+            tint = Color.White,
+            modifier = Modifier.size(18.dp),
+        )
     }
 }
 

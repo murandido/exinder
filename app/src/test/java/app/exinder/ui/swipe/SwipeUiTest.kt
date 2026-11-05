@@ -143,4 +143,27 @@ class SwipeUiTest {
         assertEquals(3, done.position)
         assertNull(done.current)
     }
+
+    @Test
+    fun `a denied send at the end of the folder goes back to the file (third court)`() {
+        // A kept, B and C marked; "send now" optimistically moved both to the
+        // trash, then the user denied the system dialog.
+        val sent = ui(3, cursor = 3, D(0, Status.MANTER, 1), D(1, Status.NA_LIXEIRA, 2), D(2, Status.NA_LIXEIRA, 3))
+        val items = sent.items
+        val after = sent.afterTrashFailed(setOf(items[1].key, items[2].key))
+
+        assertEquals("photo1.jpg", after.current?.name)
+        assertEquals(Dir.LEFT, after.enterFrom)
+        assertNull(after.statusOf(items[1]))
+        assertNull(after.statusOf(items[2]))
+        assertEquals(Status.MANTER, after.statusOf(items[0]))
+    }
+
+    @Test
+    fun `a failed send ahead of the cursor leaves the cursor alone`() {
+        val state = ui(4, cursor = 1, D(0, Status.MANTER, 1), D(2, Status.NA_LIXEIRA, 2))
+        val after = state.afterTrashFailed(setOf(state.items[2].key))
+        assertEquals(1, after.cursor)
+        assertNull(after.enterFrom)
+    }
 }

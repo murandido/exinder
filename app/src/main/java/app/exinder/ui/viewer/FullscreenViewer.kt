@@ -12,12 +12,14 @@ import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -31,6 +33,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -39,6 +42,8 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -53,7 +58,9 @@ import app.exinder.data.MediaKind
 import app.exinder.util.formatBytes
 import app.exinder.util.formatDateTime
 import app.exinder.util.formatDuration
+import app.exinder.util.shareMedia
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
 import kotlin.math.abs
 import kotlinx.coroutines.launch
 
@@ -81,7 +88,8 @@ fun FullscreenViewer(file: MediaFile, onClose: () -> Unit) {
                 .fillMaxSize()
                 .onSizeChanged { height = it.height }
                 // The background fades as the view is dragged down, like in gallery apps.
-                .background(Color.Black.copy(alpha = 1f - (drag.value / height).coerceIn(0f, 0.6f)))
+                // Read while drawing, not composing, so a drag doesn't recompose the screen.
+                .drawBehind { drawRect(Color.Black.copy(alpha = 1f - (drag.value / height).coerceIn(0f, 0.6f))) }
                 .dragDownToClose(
                     enabled = { !zoomed },
                     onDrag = { dy -> scope.launch { drag.snapTo((drag.value + dy).coerceAtLeast(0f)) } },
@@ -120,7 +128,7 @@ fun FullscreenViewer(file: MediaFile, onClose: () -> Unit) {
                         tint = Color.White,
                     )
                 }
-                Column(Modifier.padding(top = 10.dp)) {
+                Column(Modifier.weight(1f, fill = false).padding(top = 10.dp)) {
                     Text(
                         file.name,
                         color = Color.White,
@@ -137,6 +145,15 @@ fun FullscreenViewer(file: MediaFile, onClose: () -> Unit) {
                         }.joinToString(" · "),
                         color = Color.White.copy(alpha = 0.75f),
                         fontSize = 13.sp,
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+                val context = LocalContext.current
+                IconButton(onClick = { shareMedia(context, file) }) {
+                    Icon(
+                        Icons.Rounded.Share,
+                        contentDescription = stringResource(R.string.cd_share),
+                        tint = Color.White,
                     )
                 }
             }
@@ -161,8 +178,15 @@ private fun ZoomableImage(file: MediaFile, onZoomed: (Boolean) -> Unit) {
         offset = Offset(moved.x.coerceIn(-maxX, maxX), moved.y.coerceIn(-maxY, maxY))
     }
 
+    // Decoded at twice the screen size, so zooming in shows real detail (to
+    // judge sharpness) instead of magnifying a screen-sized bitmap. Twice, not
+    // the original: a 50 MP photo at full size could run out of memory.
+    val screen = LocalWindowInfo.current.containerSize
     AsyncImage(
-        model = file.uri,
+        model = ImageRequest.Builder(LocalContext.current)
+            .data(file.uri)
+            .size(screen.width * 2, screen.height * 2)
+            .build(),
         contentDescription = file.name,
         contentScale = ContentScale.Fit,
         modifier = Modifier

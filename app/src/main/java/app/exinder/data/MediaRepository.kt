@@ -35,58 +35,68 @@ class MediaRepository(private val context: Context) {
      * Lists every folder that has media, with how many files are left to review.
      *
      * @param decided keys ([MediaFile.key]) of the files that already have a decision.
+     * @param trashed how many files each folder ([FolderRef.key]) has sent to the trash.
      */
-    suspend fun folders(decided: Set<String>): List<FolderInfo> = withContext(Dispatchers.IO) {
-        // Per-folder accumulator, filled in a single pass over the cursor.
-        class Acc {
-            var total = 0
-            var remaining = 0
-            var oldestPending = Long.MAX_VALUE
-            var cover: Uri? = null
-            var anyUri: Uri? = null
-        }
+    suspend fun folders(decided: Set<String>, trashed: Map<String, Int>): List<FolderInfo> =
+        withContext(Dispatchers.IO) {
+            // Per-folder accumulator, filled in a single pass over the cursor.
+            class Acc {
+                var total = 0
+                var remaining = 0
+                var oldestPending = Long.MAX_VALUE
+                var cover: Uri? = null
+                var anyUri: Uri? = null
+            }
 
-        val byFolder = HashMap<FolderRef, Acc>()
-        val projection = arrayOf(
-            FileColumns._ID,
-            FileColumns.MEDIA_TYPE,
-            MediaColumns.RELATIVE_PATH,
-            MediaColumns.VOLUME_NAME,
-            MediaColumns.DATE_TAKEN,
-            MediaColumns.DATE_MODIFIED,
-        )
+            val byFolder = HashMap<FolderRef, Acc>()
+            val projection = arrayOf(
+                FileColumns._ID,
+                FileColumns.MEDIA_TYPE,
+                MediaColumns.RELATIVE_PATH,
+                MediaColumns.VOLUME_NAME,
+                MediaColumns.DATE_TAKEN,
+                MediaColumns.DATE_MODIFIED,
+            )
 
-        resolver.query(filesUri, projection, mediaSelection, null, null)?.use { c ->
-            val iId = c.getColumnIndexOrThrow(FileColumns._ID)
-            val iType = c.getColumnIndexOrThrow(FileColumns.MEDIA_TYPE)
-            val iPath = c.getColumnIndexOrThrow(MediaColumns.RELATIVE_PATH)
-            val iVolume = c.getColumnIndexOrThrow(MediaColumns.VOLUME_NAME)
-            val iTaken = c.getColumnIndexOrThrow(MediaColumns.DATE_TAKEN)
-            val iModified = c.getColumnIndexOrThrow(MediaColumns.DATE_MODIFIED)
+            resolver.query(filesUri, projection, mediaSelection, null, null)?.use { c ->
+                val iId = c.getColumnIndexOrThrow(FileColumns._ID)
+                val iType = c.getColumnIndexOrThrow(FileColumns.MEDIA_TYPE)
+                val iPath = c.getColumnIndexOrThrow(MediaColumns.RELATIVE_PATH)
+                val iVolume = c.getColumnIndexOrThrow(MediaColumns.VOLUME_NAME)
+                val iTaken = c.getColumnIndexOrThrow(MediaColumns.DATE_TAKEN)
+                val iModified = c.getColumnIndexOrThrow(MediaColumns.DATE_MODIFIED)
 
-            while (c.moveToNext()) {
-                val path = c.getString(iPath) ?: continue
-                val volume = c.getString(iVolume) ?: continue
-                val uri = contentUri(volume, c.getLong(iId), c.getInt(iType))
-                val acc = byFolder.getOrPut(FolderRef(volume, path)) { Acc() }
+                while (c.moveToNext()) {
+                    val path = c.getString(iPath) ?: continue
+                    val volume = c.getString(iVolume) ?: continue
+                    val uri = contentUri(volume, c.getLong(iId), c.getInt(iType))
+                    val acc = byFolder.getOrPut(FolderRef(volume, path)) { Acc() }
 
-                acc.total++
-                acc.anyUri = acc.anyUri ?: uri
-                if (uri.toString() !in decided) {
-                    acc.remaining++
-                    val takenAt = takenAt(c.getLong(iTaken), c.getLong(iModified))
-                    if (takenAt < acc.oldestPending) {
-                        acc.oldestPending = takenAt
-                        acc.cover = uri
+                    acc.total++
+                    acc.anyUri = acc.anyUri ?: uri
+                    if (uri.toString() !in decided) {
+                        acc.remaining++
+                        val takenAt = takenAt(c.getLong(iTaken), c.getLong(iModified))
+                        if (takenAt < acc.oldestPending) {
+                            acc.oldestPending = takenAt
+                            acc.cover = uri
+                        }
                     }
                 }
             }
-        }
 
-        byFolder
-            .map { (ref, acc) -> FolderInfo(ref, acc.total, acc.remaining, acc.cover ?: acc.anyUri) }
-            .sortedBy { it.ref.relativePath.lowercase() }
-    }
+            byFolder
+                .map { (ref, acc) ->
+                    FolderInfo(
+                        ref,
+                        acc.total,
+                        acc.remaining,
+                        acc.cover ?: acc.anyUri,
+                        trashed[ref.key] ?: 0,
+                    )
+                }
+                .sortedBy { it.ref.relativePath.lowercase() }
+        }
 
     /**
      * Files in a folder (excluding subfolders), oldest to newest.
@@ -167,10 +177,12 @@ class MediaRepository(private val context: Context) {
      * are hidden by default, so a trashed file counts as missing, while a file
      * moved to another folder (same ID, new path) still exists.
      */
-    suspend fun exists(uri: Uri): Boolean = withContext(Dispatchers.IO) {
+    suspend fun exists(uri: Uri): Boolean? = withContext(Dispatchers.IO) {
+        // `null` when MediaStore can't answer (no permission, provider error):
+        // callers must not read that as "gone".
         runCatching {
-            resolver.query(uri, arrayOf(MediaColumns._ID), null, null, null)?.use { it.count > 0 } ?: false
-        }.getOrDefault(false)
+            resolver.query(uri, arrayOf(MediaColumns._ID), null, null, null)?.use { it.count > 0 }
+        }.getOrNull()
     }
 
     /** `true` if the storage volume (internal storage, an SD card) is currently mounted. */

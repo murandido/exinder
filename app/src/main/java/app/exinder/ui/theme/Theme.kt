@@ -45,11 +45,17 @@ val StarBlue = Color(0xFF2DB3FF)
 /** Rewind button. */
 val RewindGold = Color(0xFFF5B748)
 
+/**
+ * Deeper green for green *text* on light backgrounds (button labels, titles):
+ * brat green on white is about 1.9:1, too faint to read; this is about 5:1.
+ */
+private val BratDeep = Color(0xFF4A7300)
+
 private val DarkSurface = Color(0xFF111111)
 
 private val LightColors = lightColorScheme(
-    primary = Brat,
-    onPrimary = Ink,
+    primary = BratDeep,
+    onPrimary = Color.White,
     secondary = BratLight,
     onSecondary = Ink,
     background = Color.White,
@@ -59,6 +65,9 @@ private val LightColors = lightColorScheme(
     surfaceVariant = Color(0xFFF1F2F4),
     onSurfaceVariant = Color(0xFF656E7B),
     surfaceContainer = Color.White,
+    // Dialogs and menus use these; Material's defaults are lavender.
+    surfaceContainerHigh = Color(0xFFF1F2F4),
+    surfaceContainerHighest = Color(0xFFE8EAED),
     error = Nope,
 )
 
@@ -74,6 +83,8 @@ private val DarkColors = darkColorScheme(
     surfaceVariant = Color(0xFF1F2228),
     onSurfaceVariant = Color(0xFFA3AAB5),
     surfaceContainer = Color(0xFF1B1D21),
+    surfaceContainerHigh = Color(0xFF22252B),
+    surfaceContainerHighest = Color(0xFF2A2D33),
     error = Nope,
 )
 

@@ -41,6 +41,9 @@ data class Decision(
     @ColumnInfo(defaultValue = "0") val appFavorited: Boolean = false,
 )
 
+/** A count per folder ([FolderRef.key]). */
+data class FolderCount(val folderKey: String, val count: Int)
+
 /** Summary of what has already gone to the trash in a folder. */
 data class TrashStats(val count: Int, val bytes: Long)
 
@@ -57,6 +60,14 @@ interface DecisionDao {
      */
     @Query("SELECT uri FROM decision WHERE status IN ('MANTER', 'FAVORITO')")
     suspend fun decidedUris(): List<String>
+
+    /** Every decision. Small (one row per reviewed file), so it is read whole. */
+    @Query("SELECT * FROM decision")
+    suspend fun all(): List<Decision>
+
+    /** How many files each folder has sent to the trash. */
+    @Query("SELECT folderKey, COUNT(*) AS count FROM decision WHERE status = 'NA_LIXEIRA' GROUP BY folderKey")
+    suspend fun trashedPerFolder(): List<FolderCount>
 
     @Upsert
     suspend fun upsert(decision: Decision)

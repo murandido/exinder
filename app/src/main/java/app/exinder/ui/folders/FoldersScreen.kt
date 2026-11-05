@@ -1,5 +1,6 @@
 package app.exinder.ui.folders
 
+import android.provider.MediaStore
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -67,7 +68,8 @@ class FoldersViewModel(private val container: AppContainer) : ViewModel() {
     fun load() {
         viewModelScope.launch {
             val decided = container.decisions.decidedUris().toSet()
-            _folders.value = container.media.folders(decided)
+            val trashed = container.decisions.trashedPerFolder().associate { it.folderKey to it.count }
+            _folders.value = container.media.folders(decided, trashed)
         }
     }
 }
@@ -126,7 +128,7 @@ fun FoldersScreen(container: AppContainer, onOpen: (FolderRef) -> Unit) {
 /** A list row: thumbnail, name, path and progress bar. */
 @Composable
 private fun FolderRow(folder: FolderInfo, onClick: () -> Unit) {
-    val reviewed = folder.total - folder.remaining
+    val reviewed = folder.reviewTotal - folder.remaining
     val done = folder.remaining == 0
 
     Row(
@@ -171,8 +173,11 @@ private fun FolderRow(folder: FolderInfo, onClick: () -> Unit) {
             )
             // Truncate at the start: the end of the path is what tells apart folders
             // with the same name (e.g. the two "WhatsApp Images").
+            // Folders on an SD card say so: the same path can exist on both volumes.
+            val onCard = folder.ref.volume != MediaStore.VOLUME_EXTERNAL_PRIMARY
+            val path = folder.ref.relativePath.trimEnd('/')
             Text(
-                folder.ref.relativePath.trimEnd('/'),
+                if (onCard) stringResource(R.string.sd_card_path, path) else path,
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -180,7 +185,7 @@ private fun FolderRow(folder: FolderInfo, onClick: () -> Unit) {
             )
             Spacer(Modifier.height(6.dp))
             LinearProgressIndicator(
-                progress = { if (folder.total == 0) 0f else reviewed.toFloat() / folder.total },
+                progress = { if (folder.reviewTotal == 0) 0f else reviewed.toFloat() / folder.reviewTotal },
                 color = Brat,
                 trackColor = MaterialTheme.colorScheme.background,
                 drawStopIndicator = {},
@@ -192,9 +197,13 @@ private fun FolderRow(folder: FolderInfo, onClick: () -> Unit) {
             Spacer(Modifier.height(4.dp))
             Text(
                 text = if (done) {
-                    pluralStringResource(R.plurals.folder_reviewed, folder.total, formatCount(folder.total))
+                    pluralStringResource(R.plurals.folder_reviewed, folder.reviewTotal, formatCount(folder.reviewTotal))
                 } else {
-                    stringResource(R.string.folder_remaining, formatCount(folder.remaining), formatCount(folder.total))
+                    stringResource(
+                        R.string.folder_remaining,
+                        formatCount(folder.remaining),
+                        formatCount(folder.reviewTotal),
+                    )
                 },
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
