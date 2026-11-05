@@ -37,6 +37,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.exinder.data.FolderRef
 import app.exinder.data.SystemRequests
 import app.exinder.data.ThemeMode
+import app.exinder.ui.albums.AlbumScreen
+import app.exinder.ui.albums.AlbumsScreen
 import app.exinder.ui.folders.FoldersScreen
 import app.exinder.ui.permissions.PermissionsScreen
 import app.exinder.ui.swipe.SwipeScreen
@@ -118,7 +120,31 @@ class ScreenStores : ViewModel() {
 /** The app's screens. */
 private sealed interface Screen {
     data object Folders : Screen
-    data class Swipe(val folder: FolderRef) : Screen
+
+    /** A folder's swipe queue; [review] is the "review kept" pass. */
+    data class Swipe(val folder: FolderRef, val review: Boolean = false) : Screen
+
+    data object Albums : Screen
+
+    data class Album(val id: Long) : Screen
+
+    /** Text form, saved across Activity recreation. Also the key of a folder visit's ViewModel. */
+    fun encode(): String = when (this) {
+        Folders -> ""
+        is Swipe -> (if (review) "r:" else "f:") + folder.key
+        Albums -> "albums"
+        is Album -> "a:$id"
+    }
+
+    companion object {
+        fun decode(text: String): Screen = when {
+            text.startsWith("f:") -> FolderRef.fromKey(text.drop(2))?.let { Swipe(it) } ?: Folders
+            text.startsWith("r:") -> FolderRef.fromKey(text.drop(2))?.let { Swipe(it, review = true) } ?: Folders
+            text == "albums" -> Albums
+            text.startsWith("a:") -> text.drop(2).toLongOrNull()?.let(::Album) ?: Albums
+            else -> Folders
+        }
+    }
 }
 
 /**
@@ -136,16 +162,17 @@ private fun ExinderRoot(container: AppContainer) {
     // key of the open folder. It lives up here, before the permissions screen's
     // `return`s, so it isn't forgotten while that screen is showing.
     var saved by rememberSaveable { mutableStateOf<String?>(null) }
+    // Where the albums list goes back to (the screen it was opened from).
+    var albumsBack by rememberSaveable { mutableStateOf("") }
     val stores: ScreenStores = viewModel()
     fun go(screen: Screen) {
+        val next = screen.encode()
         // Leaving a folder frees its ViewModel; the next visit starts fresh.
-        saved?.takeIf { it.isNotEmpty() }?.let { leaving ->
-            if (screen !is Screen.Swipe || screen.folder.key != leaving) stores.clear(leaving)
+        saved?.takeIf { it.startsWith("f:") || it.startsWith("r:") }?.let { leaving ->
+            if (leaving != next) stores.clear(leaving)
         }
-        saved = when (screen) {
-            Screen.Folders -> ""
-            is Screen.Swipe -> screen.folder.key
-        }
+        if (screen == Screen.Albums && saved?.let { Screen.decode(it) } !is Screen.Album) albumsBack = saved.orEmpty()
+        saved = next
     }
 
     // Permissions can change outside the app (in Settings), so they are
@@ -188,7 +215,7 @@ private fun ExinderRoot(container: AppContainer) {
             go(if (last != null) Screen.Swipe(last) else Screen.Folders)
         }
     }
-    val screen = saved?.let { key -> FolderRef.fromKey(key)?.let(Screen::Swipe) ?: Screen.Folders }
+    val screen = saved?.let(Screen::decode)
 
     when (val current = screen) {
         null -> Box(background)
@@ -199,16 +226,33 @@ private fun ExinderRoot(container: AppContainer) {
                 scope.launch { container.prefs.setLastFolder(folder) }
                 go(Screen.Swipe(folder))
             },
+            onAlbums = { go(Screen.Albums) },
         )
 
         is Screen.Swipe -> {
-            BackHandler { go(Screen.Folders) }
+            // The review pass goes back to the folder's normal queue.
+            BackHandler { go(if (current.review) Screen.Swipe(current.folder) else Screen.Folders) }
             SwipeScreen(
                 container = container,
                 folder = current.folder,
-                owner = stores.ownerFor(current.folder.key),
+                owner = stores.ownerFor(current.encode()),
                 onChangeFolder = { go(Screen.Folders) },
+                review = current.review,
+                onReview = { go(Screen.Swipe(current.folder, review = true)) },
+                onExitReview = { go(Screen.Swipe(current.folder)) },
+                onAlbums = { go(Screen.Albums) },
             )
+        }
+
+        Screen.Albums -> {
+            val back = { go(Screen.decode(albumsBack)) }
+            BackHandler(onBack = back)
+            AlbumsScreen(container = container, onOpen = { go(Screen.Album(it)) }, onBack = back)
+        }
+
+        is Screen.Album -> {
+            BackHandler { go(Screen.Albums) }
+            AlbumScreen(container = container, albumId = current.id, onBack = { go(Screen.Albums) })
         }
     }
 }

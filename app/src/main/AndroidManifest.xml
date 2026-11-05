@@ -17,6 +17,12 @@
     <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
 
     <!--
+        Network access is used for one thing only: uploading the albums the user
+        chooses to send to Google Photos. Nothing else ever leaves the device.
+    -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
         Media3 adds these two, for network streaming and keeping the screen on
         during playback. The app only plays local files and never uses them;
         removing them keeps the permission list honest. (Without

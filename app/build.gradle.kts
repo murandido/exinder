@@ -81,6 +81,7 @@ dependencies {
     implementation(libs.coil.gif)
     implementation(libs.coil.video)
     implementation(libs.coil.svg)
+    implementation(libs.play.services.auth)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)

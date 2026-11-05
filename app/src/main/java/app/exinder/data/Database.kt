@@ -39,6 +39,11 @@ data class Decision(
      * Undoing the decision only removes favorites the app itself set.
      */
     @ColumnInfo(defaultValue = "0") val appFavorited: Boolean = false,
+    /**
+     * Already looked at again in the "review kept" pass, so that pass doesn't
+     * show it a second time.
+     */
+    @ColumnInfo(defaultValue = "0") val refined: Boolean = false,
 )
 
 /** A count per folder ([FolderRef.key]). */
@@ -60,6 +65,9 @@ interface DecisionDao {
      */
     @Query("SELECT uri FROM decision WHERE status IN ('MANTER', 'FAVORITO')")
     suspend fun decidedUris(): List<String>
+
+    @Query("SELECT * FROM decision WHERE uri = :uri")
+    suspend fun get(uri: String): Decision?
 
     /** Every decision. Small (one row per reviewed file), so it is read whole. */
     @Query("SELECT * FROM decision")
@@ -97,9 +105,11 @@ interface DecisionDao {
  * repository. Each version bump needs a migration in [MIGRATIONS]; without one,
  * Room would crash existing installs on first access.
  */
-@Database(entities = [Decision::class], version = 2, exportSchema = true)
+@Database(entities = [Decision::class, Album::class, AlbumItem::class], version = 3, exportSchema = true)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun decisions(): DecisionDao
+
+    abstract fun albums(): AlbumDao
 }
 
 /** Version 1 → 2: adds [Decision.appFavorited]. */
@@ -109,5 +119,23 @@ private val MIGRATION_1_2 = object : Migration(1, 2) {
     }
 }
 
+/** Version 2 → 3: adds [Decision.refined] and the album tables. */
+private val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE decision ADD COLUMN refined INTEGER NOT NULL DEFAULT 0")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `album` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`name` TEXT NOT NULL, `destination` TEXT NOT NULL, `googleAlbumId` TEXT, `createdAt` INTEGER NOT NULL)",
+        )
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `album_item` (`uri` TEXT NOT NULL, `albumId` INTEGER NOT NULL, " +
+                "`name` TEXT NOT NULL, `mime` TEXT NOT NULL, `size` INTEGER NOT NULL, `state` TEXT NOT NULL, " +
+                "`addedAt` INTEGER NOT NULL, PRIMARY KEY(`uri`), FOREIGN KEY(`albumId`) REFERENCES `album`(`id`) " +
+                "ON UPDATE NO ACTION ON DELETE CASCADE )",
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_album_item_albumId` ON `album_item` (`albumId`)")
+    }
+}
+
 /** Every schema migration, in order. */
-val MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2)
+val MIGRATIONS: Array<Migration> = arrayOf(MIGRATION_1_2, MIGRATION_2_3)

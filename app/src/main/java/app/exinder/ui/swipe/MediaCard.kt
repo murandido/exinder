@@ -69,6 +69,7 @@ val CardShape = RoundedCornerShape(8.dp)
 fun MediaCard(
     file: MediaFile,
     isTop: Boolean,
+    review: Boolean,
     playVideo: Boolean,
     prepareVideo: Boolean,
     stamps: () -> Stamps,
@@ -136,7 +137,8 @@ fun MediaCard(
                 Modifier.align(Alignment.TopEnd).padding(end = 24.dp, top = 40.dp),
             )
             Stamp(
-                stringResource(R.string.stamp_favorite),
+                // In the review pass, up puts the file in an album.
+                stringResource(if (review) R.string.stamp_album else R.string.stamp_favorite),
                 StarBlue,
                 -8f,
                 { stamps().favorite },

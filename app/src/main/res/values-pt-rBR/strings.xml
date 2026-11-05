@@ -77,4 +77,58 @@
         <item quantity="other">%1$d arquivos vão pra lixeira</item>
         <item quantity="many">%1$d arquivos vão pra lixeira</item>
     </plurals>
+    <string name="menu_review">revisar mantidas</string>
+    <string name="menu_albums">álbuns</string>
+    <string name="menu_exit_review">voltar pra triagem</string>
+    <string name="review_badge">revisão</string>
+    <string name="review_empty">nada mantido pra revisar aqui</string>
+    <string name="review_done">revisão concluída</string>
+    <string name="stamp_album">ÁLBUM</string>
+    <string name="cd_album">pôr num álbum</string>
+    <string name="picker_title">pôr no álbum</string>
+    <string name="picker_new">novo álbum</string>
+    <string name="new_album_title">novo álbum</string>
+    <string name="album_name">nome</string>
+    <string name="dest_phone">neste celular</string>
+    <string name="dest_phone_desc">movidas pra Pictures/%1$s</string>
+    <string name="dest_google">Google Photos</string>
+    <string name="dest_google_desc">enviadas pra um álbum no seu Google Photos</string>
+    <string name="action_create">criar</string>
+    <string name="albums_title">álbuns</string>
+    <string name="albums_empty">nenhum álbum ainda. crie um revisando as mantidas: arraste pra cima ou toque no botão de álbum.</string>
+    <string name="album_counts">%1$s pra enviar · %2$s enviadas</string>
+    <string name="album_failed">%1$s falharam, envie de novo pra tentar outra vez</string>
+    <string name="action_send">enviar</string>
+    <string name="send_google_title">depois de enviar</string>
+    <string name="send_keep">manter os originais no celular</string>
+    <string name="send_trash">mandar os originais pra lixeira</string>
+    <string name="send_trash_desc">só as que chegaram no Google Photos; ficam na lixeira por uns 30 dias</string>
+    <string name="sending">enviando %1$d de %2$d</string>
+    <string name="needs_signin">não deu pra entrar no Google Photos: o login foi recusado ou não está configurado neste build</string>
+    <string name="write_denied">sem permissão pra mover os arquivos</string>
+    <string name="action_delete_album">apagar álbum</string>
+    <string name="delete_album_text">o álbum é esquecido aqui. nenhum arquivo é tocado, e nada sai do Google Photos.</string>
+    <string name="cd_remove">tirar do álbum</string>
+    <string name="state_sent">enviada</string>
+    <string name="state_failed">falhou</string>
+    <plurals name="review_albumed">
+        <item quantity="one">%1$d adicionada a um álbum</item>
+        <item quantity="many">%1$d adicionadas a álbuns</item>
+        <item quantity="other">%1$d adicionadas a álbuns</item>
+    </plurals>
+    <plurals name="sent_count">
+        <item quantity="one">%1$d enviada</item>
+        <item quantity="many">%1$d enviadas</item>
+        <item quantity="other">%1$d enviadas</item>
+    </plurals>
+    <plurals name="failed_count">
+        <item quantity="one">%1$d falhou</item>
+        <item quantity="many">%1$d falharam</item>
+        <item quantity="other">%1$d falharam</item>
+    </plurals>
+    <plurals name="trashed_count">
+        <item quantity="one">%1$d original foi pra lixeira</item>
+        <item quantity="many">%1$d originais foram pra lixeira</item>
+        <item quantity="other">%1$d originais foram pra lixeira</item>
+    </plurals>
 </resources>

@@ -2,6 +2,7 @@ package app.exinder.data
 
 import android.app.PendingIntent
 import android.content.ContentUris
+import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
 import android.provider.MediaStore
@@ -167,6 +168,22 @@ class MediaRepository(private val context: Context) {
      */
     fun trashRequest(uris: List<Uri>, trashed: Boolean): PendingIntent =
         MediaStore.createTrashRequest(resolver, uris, trashed)
+
+    /** Request to modify files (needed to move them to an album folder). Same mechanism as the trash. */
+    fun writeRequest(uris: List<Uri>): PendingIntent = MediaStore.createWriteRequest(resolver, uris)
+
+    /**
+     * Moves a file to another folder on the same volume, e.g. `Pictures/Trip/`.
+     * Needs write access to it (see [writeRequest]).
+     *
+     * @return `true` if MediaStore moved it.
+     */
+    suspend fun moveTo(uri: Uri, relativePath: String): Boolean = withContext(Dispatchers.IO) {
+        runCatching {
+            val values = ContentValues().apply { put(MediaColumns.RELATIVE_PATH, relativePath) }
+            resolver.update(uri, values, null, null) > 0
+        }.getOrDefault(false)
+    }
 
     /** Request to mark (or unmark) files as favorites. Same mechanism as the trash. */
     fun favoriteRequest(uris: List<Uri>, favorite: Boolean): PendingIntent =

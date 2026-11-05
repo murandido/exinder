@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.exinder.AppContainer
 import app.exinder.TrashResult
+import app.exinder.data.AlbumItem
+import app.exinder.data.AlbumItemState
 import app.exinder.data.Decision
 import app.exinder.data.FolderRef
 import app.exinder.data.MediaFile
@@ -35,6 +37,14 @@ const val TRASH_DELAY = 2
 /** Swipe screen state. */
 data class SwipeUi(
     val loading: Boolean = true,
+    /**
+     * "Review kept" pass: the queue is the folder's kept files, up sends a file
+     * to an album instead of favoriting it, and rewind restores the original
+     * decision instead of clearing it.
+     */
+    val review: Boolean = false,
+    /** Files put in an album during this review pass. */
+    val albumed: Set<String> = emptySet(),
     /** All files in the folder, oldest to newest. */
     val items: List<MediaFile> = emptyList(),
     /** Decision for each file, by [MediaFile.key]. No entry = still pending. */
@@ -147,7 +157,14 @@ sealed interface UiMessage {
  * decided after it. Until then, rewind undoes everything without the file ever having
  * moved.
  */
-class SwipeViewModel(private val container: AppContainer, val folder: FolderRef) : ViewModel() {
+class SwipeViewModel(private val container: AppContainer, val folder: FolderRef, private val review: Boolean = false) :
+    ViewModel() {
+
+    /**
+     * Review pass only: each queued file's decision as it was before this pass,
+     * restored on rewind and when a trash request fails.
+     */
+    private var originals: Map<String, Decision> = emptyMap()
 
     private val _ui = MutableStateFlow(SwipeUi())
     val ui: StateFlow<SwipeUi> = _ui.asStateFlow()
@@ -265,6 +282,17 @@ class SwipeViewModel(private val container: AppContainer, val folder: FolderRef)
                 rest.map { it.value } + late.map { it.value }
             }
 
+            if (review) {
+                // The queue is what was kept (or favorited) and not reviewed yet,
+                // in the folder's order. Decisions made in this pass start empty.
+                val kept = live.filter {
+                    (it.status == Status.MANTER || it.status == Status.FAVORITO) && !it.refined && it.uri !in inFlight
+                }.associateBy { it.uri }
+                originals = kept
+                _ui.value = SwipeUi(loading = false, review = true, items = found.filter { it.key in kept })
+                return@launch
+            }
+
             val ui = SwipeUi(
                 loading = false,
                 items = items,
@@ -287,11 +315,16 @@ class SwipeViewModel(private val container: AppContainer, val folder: FolderRef)
      *   exit animation; if the top card changed in the meantime (a tap on a
      *   trash queue thumbnail, for example), it is dropped instead of landing
      *   on the wrong card.
+     * @param albumId review pass only: the album an up swipe puts the file in.
      */
-    fun decide(dir: Dir, key: String) {
+    fun decide(dir: Dir, key: String, albumId: Long? = null) {
         val before = _ui.value
         val file = before.current ?: return
         if (file.key != key) return
+        if (review) {
+            reviewDecide(file, dir, albumId)
+            return
+        }
         val status = when (dir) {
             Dir.RIGHT -> Status.MANTER
             Dir.UP -> Status.FAVORITO
@@ -333,6 +366,46 @@ class SwipeViewModel(private val container: AppContainer, val folder: FolderRef)
     }
 
     /**
+     * A decision in the review pass. Right confirms the keep, up confirms it and
+     * puts the file in an album, left marks it for the trash with the usual
+     * 2-decision grace. The stored decision keeps the original status, so
+     * rewinding can restore it exactly.
+     */
+    private fun reviewDecide(file: MediaFile, dir: Dir, albumId: Long?) {
+        val original = originals[file.key] ?: return
+        if (dir == Dir.UP && albumId == null) return
+        val status = if (dir == Dir.LEFT) Status.LIXEIRA_PENDENTE else Status.MANTER
+        val at = stamp()
+
+        _ui.update { ui ->
+            val decided = ui.copy(
+                status = ui.status + (file.key to status),
+                decidedAt = ui.decidedAt + (file.key to at),
+                albumed = if (dir == Dir.UP) ui.albumed + file.key else ui.albumed,
+                enterFrom = null,
+                passedTrash = emptyList(),
+            )
+            decided.copy(cursor = decided.nextUndecided(ui.cursor + 1) ?: ui.items.size)
+        }
+
+        viewModelScope.launch {
+            val row = if (dir == Dir.LEFT) {
+                original.copy(status = Status.LIXEIRA_PENDENTE, decidedAt = at, folderKey = folder.key)
+            } else {
+                original.copy(refined = true, decidedAt = at, folderKey = folder.key)
+            }
+            container.decisions.upsert(row)
+            if (albumId != null) {
+                container.albums.upsertItem(
+                    AlbumItem(file.key, albumId, file.name, file.mime, file.size, AlbumItemState.PENDING, at),
+                )
+            }
+        }
+
+        commitDue()
+    }
+
+    /**
      * Goes back one card. If it was in the trash queue, the deletion is cancelled;
      * if the app favorited it, the favorite is undone (a favorite the file already
      * had stays). Files that already went to the
@@ -349,26 +422,41 @@ class SwipeViewModel(private val container: AppContainer, val folder: FolderRef)
         val previous = ui.statusOf(file)
         val skipped = (minOf(ui.cursor, ui.items.size) - 1 downTo target + 1).map { ui.items[it] }
 
-        val undoFavorite = previous == Status.FAVORITO && file.key in ui.appFavorited
+        val undoFavorite = !review && previous == Status.FAVORITO && file.key in ui.appFavorited
+        val wasAlbumed = file.key in ui.albumed
 
         _ui.update {
             it.copy(
                 status = it.status - file.key,
                 decidedAt = it.decidedAt - file.key,
                 appFavorited = it.appFavorited - file.key,
+                albumed = it.albumed - file.key,
                 cursor = target,
                 // Accumulates: rewinding to a thumbnail calls this function several times.
                 passedTrash = it.passedTrash + skipped,
                 // The card comes back from the same side it left.
-                enterFrom = when (previous) {
-                    Status.MANTER -> Dir.RIGHT
-                    Status.FAVORITO -> Dir.UP
+                enterFrom = when {
+                    wasAlbumed -> Dir.UP
+                    previous == Status.MANTER -> Dir.RIGHT
+                    previous == Status.FAVORITO -> Dir.UP
                     else -> Dir.LEFT
                 },
             )
         }
 
-        viewModelScope.launch { container.decisions.delete(file.key) }
+        viewModelScope.launch {
+            val original = originals[file.key]
+            if (review && original != null) {
+                // Back to how it was before the review pass: kept, not reviewed,
+                // and out of the album if it hasn't been sent yet.
+                container.decisions.upsert(original)
+                container.albums.itemFor(file.key)
+                    ?.takeIf { it.state == AlbumItemState.PENDING }
+                    ?.let { container.albums.removeItem(it.uri) }
+            } else {
+                container.decisions.delete(file.key)
+            }
+        }
 
         // Only undo a favorite the app itself set; a favorite the file
         // already had before the swipe stays put. Stored in the database, so
@@ -460,8 +548,13 @@ class SwipeViewModel(private val container: AppContainer, val folder: FolderRef)
                         Decision(f.key, folder.key, Status.NA_LIXEIRA, f.size, stamps[f.key] ?: stamp()),
                     )
                 }
-                // Still here: the file becomes "unreviewed" again.
-                stayed.forEach { container.decisions.delete(it.key) }
+                // Still here: the file becomes "unreviewed" again (in the review
+                // pass, it goes back to its original decision).
+                val restore = originals
+                stayed.forEach { f ->
+                    restore[f.key]?.let { container.decisions.upsert(it) }
+                        ?: container.decisions.delete(f.key)
+                }
 
                 container.trashResults.emit(TrashResult(folder.key, gone.size, stayed))
             } finally {

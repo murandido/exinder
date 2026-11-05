@@ -74,4 +74,54 @@
         <item quantity="one">%1$d file will go to the trash</item>
         <item quantity="other">%1$d files will go to the trash</item>
     </plurals>
+    <string name="menu_review">review kept</string>
+    <string name="menu_albums">albums</string>
+    <string name="menu_exit_review">back to sorting</string>
+    <string name="review_badge">review</string>
+    <string name="review_empty">nothing kept to review here</string>
+    <string name="review_done">review done</string>
+    <string name="stamp_album">ALBUM</string>
+    <string name="cd_album">add to album</string>
+    <string name="picker_title">add to album</string>
+    <string name="picker_new">new album</string>
+    <string name="new_album_title">new album</string>
+    <string name="album_name">name</string>
+    <string name="dest_phone">on this phone</string>
+    <string name="dest_phone_desc">moved to Pictures/%1$s</string>
+    <string name="dest_google">Google Photos</string>
+    <string name="dest_google_desc">uploaded to an album in your Google Photos</string>
+    <string name="action_create">create</string>
+    <string name="albums_title">albums</string>
+    <string name="albums_empty">no albums yet. create one while reviewing kept files: swipe up or tap the album button.</string>
+    <string name="album_counts">%1$s to send · %2$s sent</string>
+    <string name="album_failed">%1$s failed, send again to retry</string>
+    <string name="action_send">send</string>
+    <string name="send_google_title">after uploading</string>
+    <string name="send_keep">keep the originals on the phone</string>
+    <string name="send_trash">send the originals to the trash</string>
+    <string name="send_trash_desc">only the ones that reached Google Photos; they stay in the trash for about 30 days</string>
+    <string name="sending">sending %1$d of %2$d</string>
+    <string name="needs_signin">couldn\'t sign in to Google Photos: sign-in was declined or isn\'t set up for this build</string>
+    <string name="write_denied">no permission to move the files</string>
+    <string name="action_delete_album">delete album</string>
+    <string name="delete_album_text">the album is forgotten here. no files are touched, and nothing is removed from Google Photos.</string>
+    <string name="cd_remove">remove from album</string>
+    <string name="state_sent">sent</string>
+    <string name="state_failed">failed</string>
+    <plurals name="review_albumed">
+        <item quantity="one">%1$d added to an album</item>
+        <item quantity="other">%1$d added to albums</item>
+    </plurals>
+    <plurals name="sent_count">
+        <item quantity="one">%1$d sent</item>
+        <item quantity="other">%1$d sent</item>
+    </plurals>
+    <plurals name="failed_count">
+        <item quantity="one">%1$d failed</item>
+        <item quantity="other">%1$d failed</item>
+    </plurals>
+    <plurals name="trashed_count">
+        <item quantity="one">%1$d original sent to the trash</item>
+        <item quantity="other">%1$d originals sent to the trash</item>
+    </plurals>
 </resources>

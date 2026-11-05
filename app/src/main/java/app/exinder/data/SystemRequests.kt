@@ -3,6 +3,7 @@ package app.exinder.data
 import android.app.Activity
 import android.app.PendingIntent
 import androidx.activity.ComponentActivity
+import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -23,7 +24,7 @@ object SystemRequests {
 
     private var owner: ComponentActivity? = null
     private var launcher: ActivityResultLauncher<IntentSenderRequest>? = null
-    private var pending: CompletableDeferred<Boolean>? = null
+    private var pending: CompletableDeferred<ActivityResult?>? = null
 
     /** One request at a time: Android doesn't queue these intents. */
     private val mutex = Mutex()
@@ -34,7 +35,7 @@ object SystemRequests {
         launcher = activity.registerForActivityResult(
             ActivityResultContracts.StartIntentSenderForResult(),
         ) { result ->
-            pending?.complete(result.resultCode == Activity.RESULT_OK)
+            pending?.complete(result)
             pending = null
         }
     }
@@ -57,7 +58,7 @@ object SystemRequests {
         owner = null
         launcher = null
         if (activity.isFinishing) {
-            pending?.complete(false)
+            pending?.complete(null)
             pending = null
         }
     }
@@ -68,14 +69,22 @@ object SystemRequests {
      * @return `true` if the system applied the request; `false` if the user
      *   declined or there was no Activity to launch it.
      */
-    suspend fun run(request: PendingIntent): Boolean = mutex.withLock {
-        val deferred = CompletableDeferred<Boolean>()
+    suspend fun run(request: PendingIntent): Boolean = runForResult(request)?.resultCode == Activity.RESULT_OK
+
+    /**
+     * Like [run], but returns the whole result, for requests that hand data
+     * back (Google sign-in returns the authorization in the result's intent).
+     *
+     * @return `null` if there was no Activity to launch it, or it finished for good.
+     */
+    suspend fun runForResult(request: PendingIntent): ActivityResult? = mutex.withLock {
+        val deferred = CompletableDeferred<ActivityResult?>()
         val started = withContext(Dispatchers.Main) {
             val current = launcher ?: return@withContext false
             pending = deferred
             current.launch(IntentSenderRequest.Builder(request.intentSender).build())
             true
         }
-        if (started) deferred.await() else false
+        if (started) deferred.await() else null
     }
 }

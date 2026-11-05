@@ -36,6 +36,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.PhotoAlbum
 import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.AlertDialog
@@ -101,6 +102,7 @@ import app.exinder.data.MediaKind
 import app.exinder.data.Status
 import app.exinder.data.ThemeMode
 import app.exinder.data.TrashStats
+import app.exinder.ui.albums.AlbumPicker
 import app.exinder.ui.theme.Brat
 import app.exinder.ui.theme.Condensed
 import app.exinder.ui.theme.ExinderLogo
@@ -169,11 +171,20 @@ private fun releaseDir(x: Float, y: Float, vx: Float, vy: Float, size: IntSize):
  * queue and the Tinder-style round buttons.
  */
 @Composable
-fun SwipeScreen(container: AppContainer, folder: FolderRef, owner: ViewModelStoreOwner, onChangeFolder: () -> Unit) {
+fun SwipeScreen(
+    container: AppContainer,
+    folder: FolderRef,
+    owner: ViewModelStoreOwner,
+    onChangeFolder: () -> Unit,
+    review: Boolean = false,
+    onReview: () -> Unit = {},
+    onExitReview: () -> Unit = {},
+    onAlbums: () -> Unit = {},
+) {
     // Scoped to this visit to the folder (see ScreenStores): it loads the folder
     // when created and survives Activity recreation.
-    val vm: SwipeViewModel = viewModel(viewModelStoreOwner = owner, key = folder.key) {
-        SwipeViewModel(container, folder)
+    val vm: SwipeViewModel = viewModel(viewModelStoreOwner = owner, key = folder.key + if (review) "#review" else "") {
+        SwipeViewModel(container, folder, review)
     }
     val ui by vm.ui.collectAsStateWithLifecycle()
     val trash by vm.trashStats.collectAsStateWithLifecycle()
@@ -183,6 +194,12 @@ fun SwipeScreen(container: AppContainer, folder: FolderRef, owner: ViewModelStor
 
     var fullscreen by remember { mutableStateOf<MediaFile?>(null) }
     var confirmReset by remember { mutableStateOf(false) }
+
+    // Review pass: an up swipe (or the album button) opens the album picker;
+    // the card only leaves once an album is picked.
+    var picking by remember { mutableStateOf(false) }
+    var albumChoice by remember { mutableStateOf<Long?>(null) }
+    val albums by container.albums.summaries().collectAsStateWithLifecycle(emptyList())
 
     LaunchedEffect(vm) {
         vm.messages.collect { message ->
@@ -217,6 +234,10 @@ fun SwipeScreen(container: AppContainer, folder: FolderRef, owner: ViewModelStor
     ) {
         TopBar(
             folder = folder,
+            review = review,
+            onReview = onReview,
+            onExitReview = onExitReview,
+            onAlbums = onAlbums,
             theme = theme,
             onTheme = { mode -> scope.launch { container.prefs.setTheme(mode) } },
             onChangeFolder = onChangeFolder,
@@ -229,17 +250,40 @@ fun SwipeScreen(container: AppContainer, folder: FolderRef, owner: ViewModelStor
                 CircularProgressIndicator(color = Brat)
             }
 
-            ui.items.isEmpty() -> EmptyState(onChangeFolder)
+            ui.items.isEmpty() -> EmptyState(review, onChangeFolder)
 
             ui.current == null -> Summary(ui, trash, vm, onChangeFolder)
 
             // While the fullscreen viewer is open, the card's video stops: otherwise two
             // players would be decoding the same file at the same time.
-            else -> Deck(ui, vm, videoPaused = fullscreen != null, onOpen = { fullscreen = it })
+            else -> Deck(
+                ui,
+                vm,
+                videoPaused = fullscreen != null,
+                onOpen = { fullscreen = it },
+                onPickAlbum = { picking = true },
+                albumChoice = albumChoice,
+                onAlbumConsumed = { albumChoice = null },
+            )
         }
     }
 
     fullscreen?.let { FullscreenViewer(it, onClose = { fullscreen = null }) }
+
+    if (picking) {
+        AlbumPicker(
+            albums = albums,
+            onPick = { id ->
+                picking = false
+                albumChoice = id
+            },
+            onCreate = { name, destination ->
+                picking = false
+                scope.launch { albumChoice = container.albumSender.createAlbum(name, destination) }
+            },
+            onDismiss = { picking = false },
+        )
+    }
 
     if (confirmReset) {
         AlertDialog(
@@ -263,6 +307,10 @@ fun SwipeScreen(container: AppContainer, folder: FolderRef, owner: ViewModelStor
 @Composable
 private fun TopBar(
     folder: FolderRef,
+    review: Boolean,
+    onReview: () -> Unit,
+    onExitReview: () -> Unit,
+    onAlbums: () -> Unit,
     theme: ThemeMode,
     onTheme: (ThemeMode) -> Unit,
     onChangeFolder: () -> Unit,
@@ -280,7 +328,7 @@ private fun TopBar(
         // menu button keeps its size even with a long name and large fonts.
         Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
             Text(
-                folder.name,
+                if (review) stringResource(R.string.review_badge) + " · " + folder.name else folder.name,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 15.sp,
                 maxLines = 1,
@@ -295,20 +343,22 @@ private fun TopBar(
                 Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.cd_menu))
             }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.menu_change_folder)) },
+                @Composable
+                fun Item(text: String, action: () -> Unit) = DropdownMenuItem(
+                    text = { Text(text) },
                     onClick = {
                         menu = false
-                        onChangeFolder()
+                        action()
                     },
                 )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.menu_reset_folder)) },
-                    onClick = {
-                        menu = false
-                        onReset()
-                    },
-                )
+                if (review) {
+                    Item(stringResource(R.string.menu_exit_review), onExitReview)
+                } else {
+                    Item(stringResource(R.string.menu_change_folder), onChangeFolder)
+                    Item(stringResource(R.string.menu_review), onReview)
+                }
+                Item(stringResource(R.string.menu_albums), onAlbums)
+                if (!review) Item(stringResource(R.string.menu_reset_folder), onReset)
                 // Each tap switches to the next: system → light → dark → system.
                 // The menu stays open, so the user can see the result and keep switching.
                 DropdownMenuItem(
@@ -357,7 +407,15 @@ private fun CounterRow(ui: SwipeUi, trash: TrashStats) {
  * coordinates don't shift along with the card.
  */
 @Composable
-private fun ColumnScope.Deck(ui: SwipeUi, vm: SwipeViewModel, videoPaused: Boolean, onOpen: (MediaFile) -> Unit) {
+private fun ColumnScope.Deck(
+    ui: SwipeUi,
+    vm: SwipeViewModel,
+    videoPaused: Boolean,
+    onOpen: (MediaFile) -> Unit,
+    onPickAlbum: () -> Unit,
+    albumChoice: Long?,
+    onAlbumConsumed: () -> Unit,
+) {
     val top = ui.current ?: return
     val next = ui.next
     val scope = rememberCoroutineScope()
@@ -428,7 +486,7 @@ private fun ColumnScope.Deck(ui: SwipeUi, vm: SwipeViewModel, videoPaused: Boole
     }
 
     /** Flings the card off screen and only then records the decision. */
-    fun fling(dir: Dir) {
+    fun fling(dir: Dir, albumId: Long? = null) {
         if (busy || area == IntSize.Zero) return
         busy = true
         scope.launch {
@@ -440,8 +498,15 @@ private fun ColumnScope.Deck(ui: SwipeUi, vm: SwipeViewModel, videoPaused: Boole
                     Dir.UP -> launch { motion.y.animateTo(-area.height * 1.5f, spec) }
                 }
             }
-            vm.decide(dir, top.key)
+            vm.decide(dir, top.key, albumId)
         }
+    }
+
+    // Review pass: once an album is picked, the card flies up into it.
+    LaunchedEffect(albumChoice) {
+        val id = albumChoice ?: return@LaunchedEffect
+        onAlbumConsumed()
+        fling(Dir.UP, id)
     }
 
     fun springBack() {
@@ -518,7 +583,17 @@ private fun ColumnScope.Deck(ui: SwipeUi, vm: SwipeViewModel, videoPaused: Boole
                         if (busy) return@detectDragGestures
                         val v = tracker.calculateVelocity()
                         val dir = releaseDir(motion.x.value, motion.y.value, v.x, v.y, area)
-                        if (dir != null) fling(dir) else springBack()
+                        when {
+                            dir == null -> springBack()
+
+                            // Review pass: up asks for an album first; the card waits.
+                            dir == Dir.UP && ui.review -> {
+                                springBack()
+                                onPickAlbum()
+                            }
+
+                            else -> fling(dir)
+                        }
                     },
                     onDragCancel = { if (!busy) springBack() },
                 )
@@ -535,6 +610,7 @@ private fun ColumnScope.Deck(ui: SwipeUi, vm: SwipeViewModel, videoPaused: Boole
                 MediaCard(
                     file = file,
                     isTop = isTop,
+                    review = ui.review,
                     playVideo = isTop && !videoPaused,
                     // Both cards in the stack keep their player ready, except while
                     // the full screen viewer is open: then they let go of their
@@ -589,7 +665,8 @@ private fun ColumnScope.Deck(ui: SwipeUi, vm: SwipeViewModel, videoPaused: Boole
         progress = ::progress,
         onRewind = { if (!busy) vm.rewind() },
         onTrash = { fling(Dir.LEFT) },
-        onFavorite = { fling(Dir.UP) },
+        review = ui.review,
+        onFavorite = { if (ui.review) onPickAlbum() else fling(Dir.UP) },
         onKeep = { fling(Dir.RIGHT) },
     )
 }
@@ -653,6 +730,7 @@ private fun ActionButtons(
     progress: (Dir) -> Float,
     onRewind: () -> Unit,
     onTrash: () -> Unit,
+    review: Boolean,
     onFavorite: () -> Unit,
     onKeep: () -> Unit,
 ) {
@@ -669,9 +747,17 @@ private fun ActionButtons(
         RoundAction(Icons.Rounded.Close, stringResource(R.string.cd_trash), Nope, 66.dp, {
             progress(Dir.LEFT)
         }, true, onTrash)
-        RoundAction(Icons.Rounded.Star, stringResource(R.string.cd_favorite), StarBlue, 52.dp, {
-            progress(Dir.UP)
-        }, true, onFavorite)
+        RoundAction(
+            if (review) Icons.Rounded.PhotoAlbum else Icons.Rounded.Star,
+            stringResource(if (review) R.string.cd_album else R.string.cd_favorite),
+            StarBlue,
+            52.dp,
+            {
+                progress(Dir.UP)
+            },
+            true,
+            onFavorite,
+        )
         RoundAction(Icons.Rounded.Favorite, stringResource(R.string.cd_keep), Brat, 66.dp, {
             progress(Dir.RIGHT)
         }, true, onKeep)
@@ -713,9 +799,9 @@ private fun RoundAction(
     }
 }
 
-/** Folder with no photos or videos. */
+/** Folder with no photos or videos (or, in the review pass, nothing kept left to review). */
 @Composable
-private fun ColumnScope.EmptyState(onChangeFolder: () -> Unit) {
+private fun ColumnScope.EmptyState(review: Boolean, onChangeFolder: () -> Unit) {
     Column(
         Modifier
             .weight(1f)
@@ -724,7 +810,12 @@ private fun ColumnScope.EmptyState(onChangeFolder: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(stringResource(R.string.empty_folder), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text(
+            stringResource(if (review) R.string.review_empty else R.string.empty_folder),
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+        )
         Spacer(Modifier.height(16.dp))
         BratButton(stringResource(R.string.action_pick_another), onChangeFolder)
     }
@@ -748,7 +839,7 @@ private fun ColumnScope.Summary(ui: SwipeUi, trash: TrashStats, vm: SwipeViewMod
             verticalArrangement = Arrangement.Center,
         ) {
             Text(
-                stringResource(R.string.summary_title),
+                stringResource(if (ui.review) R.string.review_done else R.string.summary_title),
                 fontFamily = Condensed,
                 fontWeight = FontWeight.Bold,
                 fontSize = 34.sp,
@@ -773,6 +864,12 @@ private fun ColumnScope.Summary(ui: SwipeUi, trash: TrashStats, vm: SwipeViewMod
                 stringResource(R.string.freed, formatBytes(trash.bytes)),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            if (ui.albumed.isNotEmpty()) {
+                Text(
+                    pluralStringResource(R.plurals.review_albumed, ui.albumed.size, ui.albumed.size),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
             val pending = ui.pending.size
             if (pending > 0) {

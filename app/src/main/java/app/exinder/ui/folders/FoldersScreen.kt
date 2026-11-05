@@ -21,8 +21,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.PhotoAlbum
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -79,7 +81,7 @@ class FoldersViewModel(private val container: AppContainer) : ViewModel() {
  * separate item, with its file count and how much has been reviewed.
  */
 @Composable
-fun FoldersScreen(container: AppContainer, onOpen: (FolderRef) -> Unit) {
+fun FoldersScreen(container: AppContainer, onOpen: (FolderRef) -> Unit, onAlbums: () -> Unit) {
     val vm: FoldersViewModel = viewModel { FoldersViewModel(container) }
     val folders by vm.folders.collectAsStateWithLifecycle()
 
@@ -92,7 +94,16 @@ fun FoldersScreen(container: AppContainer, onOpen: (FolderRef) -> Unit) {
             .background(MaterialTheme.colorScheme.background)
             .systemBarsPadding(),
     ) {
-        ExinderLogo(Modifier.padding(start = 16.dp, top = 8.dp))
+        Row(
+            Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ExinderLogo()
+            Spacer(Modifier.weight(1f))
+            IconButton(onClick = onAlbums) {
+                Icon(Icons.Rounded.PhotoAlbum, contentDescription = stringResource(R.string.menu_albums))
+            }
+        }
         Text(
             text = stringResource(R.string.folders_title),
             fontSize = 22.sp,

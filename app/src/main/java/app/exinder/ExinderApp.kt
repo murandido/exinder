@@ -2,8 +2,11 @@ package app.exinder
 
 import android.app.Application
 import androidx.room.Room
+import app.exinder.data.AlbumDao
+import app.exinder.data.AlbumSender
 import app.exinder.data.AppDatabase
 import app.exinder.data.DecisionDao
+import app.exinder.data.GooglePhotos
 import app.exinder.data.MIGRATIONS
 import app.exinder.data.MediaFile
 import app.exinder.data.MediaRepository
@@ -54,15 +57,20 @@ class ExinderApp :
  */
 class AppContainer(app: Application) {
 
-    val decisions: DecisionDao = Room
+    private val database: AppDatabase = Room
         .databaseBuilder(app, AppDatabase::class.java, "exinder.db")
         .addMigrations(*MIGRATIONS)
         .build()
-        .decisions()
+
+    val decisions: DecisionDao = database.decisions()
+
+    val albums: AlbumDao = database.albums()
 
     val media = MediaRepository(app)
 
     val prefs = Prefs(app)
+
+    val albumSender = AlbumSender(albums, decisions, media, GooglePhotos(app))
 
     /**
      * Scope that lives as long as the process. Sending to the trash runs here
