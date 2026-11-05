@@ -12,12 +12,14 @@ import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -56,6 +58,7 @@ import app.exinder.data.MediaKind
 import app.exinder.util.formatBytes
 import app.exinder.util.formatDateTime
 import app.exinder.util.formatDuration
+import app.exinder.util.shareMedia
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import kotlin.math.abs
@@ -125,7 +128,7 @@ fun FullscreenViewer(file: MediaFile, onClose: () -> Unit) {
                         tint = Color.White,
                     )
                 }
-                Column(Modifier.padding(top = 10.dp)) {
+                Column(Modifier.weight(1f, fill = false).padding(top = 10.dp)) {
                     Text(
                         file.name,
                         color = Color.White,
@@ -142,6 +145,15 @@ fun FullscreenViewer(file: MediaFile, onClose: () -> Unit) {
                         }.joinToString(" · "),
                         color = Color.White.copy(alpha = 0.75f),
                         fontSize = 13.sp,
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+                val context = LocalContext.current
+                IconButton(onClick = { shareMedia(context, file) }) {
+                    Icon(
+                        Icons.Rounded.Share,
+                        contentDescription = stringResource(R.string.cd_share),
+                        tint = Color.White,
                     )
                 }
             }

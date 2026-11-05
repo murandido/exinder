@@ -111,6 +111,7 @@ import app.exinder.ui.theme.StarBlue
 import app.exinder.ui.viewer.FullscreenViewer
 import app.exinder.util.formatBytes
 import app.exinder.util.formatCount
+import app.exinder.util.shareMedia
 import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -539,6 +540,12 @@ private fun ColumnScope.Deck(ui: SwipeUi, vm: SwipeViewModel, videoPaused: Boole
                     // the full screen viewer is open: then they let go of their
                     // decoders, which are a limited resource on some phones.
                     prepareVideo = !videoPaused,
+                    // Share only from the top card, and not while it is flying out.
+                    onShare = if (isTop) {
+                        { if (!busy) shareMedia(context, file) }
+                    } else {
+                        null
+                    },
                     stamps = { Stamps(progress(Dir.RIGHT), progress(Dir.LEFT), progress(Dir.UP)) },
                     modifier = Modifier
                         .fillMaxSize()

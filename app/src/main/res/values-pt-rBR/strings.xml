@@ -21,6 +21,8 @@
     <string name="card_error">não deu pra abrir esse arquivo</string>
     <string name="msg_favorite_failed">não deu pra favoritar %1$s</string>
     <string name="msg_trash_failed">não deu pra mandar %1$s pra lixeira</string>
+    <string name="cd_share">compartilhar</string>
+    <string name="share_title">compartilhar com</string>
     <string name="cd_close">fechar</string>
     <string name="reset_title">resetar %1$s?</string>
     <string name="reset_text">as decisões dessa pasta são esquecidas e a fila recomeça do início. o que já foi pra lixeira continua lá e segue contando como liberado. nenhum arquivo é tocado.</string>

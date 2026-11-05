@@ -22,6 +22,8 @@
     <string name="card_error">couldn\'t open this file</string>
     <string name="msg_favorite_failed">couldn\'t favorite %1$s</string>
     <string name="msg_trash_failed">couldn\'t send %1$s to the trash</string>
+    <string name="cd_share">share</string>
+    <string name="share_title">share with</string>
     <string name="cd_close">close</string>
     <string name="reset_title">reset %1$s?</string>
     <string name="reset_text">this folder\'s decisions are forgotten and the queue starts over. files already in the trash stay there and still count as freed. no files are touched.</string>
