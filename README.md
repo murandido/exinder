@@ -60,12 +60,14 @@ Even then, the file goes to the **Android trash**, not straight to deletion: it 
 - **Rewind shows what's gone:** files sent to the trash during the current visit to a folder pass by as grey "in the trash" cards.
 - **Full screen** with pinch to zoom; drag down to close.
 - **Share** a photo or video you want to send to someone, straight from the card or the full screen view, through Android's share sheet.
+- **Review kept files, then organize them into albums.** In a folder, *menu → review kept* runs a second pass over what you kept: swipe left to trash it after all, right to confirm, or up to put it in an album.
+- **Albums on the phone or in Google Photos.** Each album has a destination: a folder on the phone (`Pictures/<album>`, files are moved there) or a real album in your Google Photos (files are uploaded). Albums are sent when you tap *send*, so you can still take files out before that. For Google Photos, you choose per send whether the originals stay on the phone or go to the trash.
 - **Progress saved per folder:** close the app midway and come back to the same card, with the trash queue intact.
 - **Each subfolder is its own folder** in the list, with a review progress bar.
 - **No confirmation for every file:** with the *Media management* permission, Android doesn't ask each time.
 - **Light, dark or system theme**, picked from the menu.
 - **English and Brazilian Portuguese.**
-- **Fully offline:** the app doesn't even request network access.
+- **Offline unless you use Google Photos:** the only network access is uploading the Google Photos albums you send. No analytics, no other servers.
 
 ## Risks
 
@@ -75,6 +77,7 @@ Please read this before pointing exinder at photos you care about.
 - **It moves real files to the trash.** A logic bug could send a file you didn't swipe left on to the trash, or send it without the 2-file grace. Files in the system trash are deleted permanently after about 30 days.
 - **With *Media management* on, nothing asks first.** That permission lets the app trash files without a system dialog. If you want a second chance on every file, skip it: Android will then confirm each one.
 - **Barely tested.** It has been used on a single phone (Samsung Galaxy S25 Ultra, Android 17). Other manufacturers handle the trash, SD cards and permissions differently.
+- **Google Photos uploads can trash originals.** If you choose to send the originals to the trash after an upload, they go there as soon as Google Photos confirms it received them. Check the album in Google Photos before the phone's trash expires.
 - **No warranty.** It is MIT-licensed and provided "as is".
 
 **If you use it anyway:**
@@ -90,9 +93,10 @@ Please read this before pointing exinder at photos you care about.
 | :-- | :-- | :-: |
 | Photos and videos (`READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO`; `READ_EXTERNAL_STORAGE` on Android 12) | build each folder's queue | yes, full access |
 | Selected photos (`READ_MEDIA_VISUAL_USER_SELECTED`, Android 14+) | lets Android offer "limited access", so the app can tell it apart from full access and ask for the latter | declared, not enough on its own |
+| Internet (`INTERNET`) | uploading albums to Google Photos, only when you tap *send* | only for Google Photos albums |
 | Media management (`MANAGE_MEDIA`) | send to the trash and favorite without a system dialog | recommended |
 
-That is the whole list: no network, no wake lock (the video library's own requests for those are removed from the manifest). Android 14+'s "limited access" (picking a few photos) isn't enough: the app needs to see the whole folder, and says so when that's the case. Without media management the app still works, but Android asks for confirmation every time something goes to the trash.
+That is the whole list: no network state, no wake lock (the video library's own requests for those are removed from the manifest). Android 14+'s "limited access" (picking a few photos) isn't enough: the app needs to see the whole folder, and says so when that's the case. Without media management the app still works, but Android asks for confirmation every time something goes to the trash.
 
 ## Installing
 
@@ -116,6 +120,10 @@ For a much smaller APK (about 4 MB instead of 70 MB), build the release variant 
 
 Every CI run on `main` also uploads the debug APK as a build artifact.
 
+### Google Photos albums
+
+Albums on the phone work out of the box. Albums in Google Photos need a free, one-time Google Cloud registration of your build (about 15 minutes): see [docs/GOOGLE_PHOTOS.md](docs/GOOGLE_PHOTOS.md). The app can only add to albums it created; it can't see the rest of your library.
+
 ### Language
 
 The app follows the system language: English, or Brazilian Portuguese on a phone set to Portuguese. On Android 13+ you can pick the app's language on its own in *Settings → Apps → exinder → Language*.
@@ -128,7 +136,8 @@ The app follows the system language: English, or Brazilian Portuguese on a phone
 | Folders, trash and favorites | `MediaStore` (`createTrashRequest`, `createFavoriteRequest`) |
 | Images, GIFs and SVGs | Coil 3 |
 | Video | Media3 ExoPlayer |
-| Saved decisions | Room |
+| Saved decisions and albums | Room |
+| Google Photos | Photos Library API (`appendonly` scope), sign-in through Google Play services |
 | Preferences | DataStore |
 
 ```
@@ -137,7 +146,10 @@ app/src/main/java/app/exinder/
 ├── MainActivity.kt          # single Activity and navigation between screens
 ├── data/
 │   ├── Models.kt            # folder, file and decision status
-│   ├── MediaRepository.kt   # MediaStore queries, trash and favorites
+│   ├── MediaRepository.kt   # MediaStore queries, trash, favorites and moves
+│   ├── Albums.kt            # Room: albums and the files picked for them
+│   ├── AlbumSender.kt       # moves files to album folders or uploads them
+│   ├── GooglePhotos.kt      # Google Photos sign-in and upload calls
 │   ├── Database.kt          # Room: decisions saved on every swipe
 │   ├── Prefs.kt             # DataStore: last folder, theme
 │   └── SystemRequests.kt    # bridge to system confirmation dialogs
@@ -145,6 +157,7 @@ app/src/main/java/app/exinder/
 │   ├── theme/               # brat green palette and logo
 │   ├── permissions/         # permissions screen
 │   ├── folders/             # folder list with progress
+│   ├── albums/              # album list, album screen and album picker
 │   ├── swipe/               # card stack, gestures and the 2-file rule
 │   └── viewer/              # video player and full screen viewer
 └── util/Format.kt           # dates, sizes and numbers

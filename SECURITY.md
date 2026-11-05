@@ -1,6 +1,6 @@
 # Security policy
 
-exinder runs entirely on the device, has no network access and collects no data. The main risk is not an attacker but a bug that sends the wrong file to the trash.
+exinder runs on the device and collects no data. Its only network access is uploading the Google Photos albums the user sends, straight to Google, with an `appendonly` token that can't read the rest of the library. The main risk is not an attacker but a bug that sends the wrong file to the trash.
 
 ## Reporting
 

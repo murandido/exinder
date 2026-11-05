@@ -10,7 +10,7 @@ Thanks for your interest. exinder is a small personal project, but issues and pu
 - **Data safety first.** The app moves real files to the trash. Anything that touches the trash queue, rewind, `SwipeViewModel`, `MediaRepository` or `SystemRequests` needs a unit test or a clear explanation of how it was tested, and must be tried on a throwaway folder, never on real photos.
 - **One change per commit**, following [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `hotfix:`, `refactor:`, `style:`, `test:`, `docs:`, `ci:`, `chore:`.
 - **Comments explain why**, not what. Keep them in English.
-- **No network access.** The app has no `INTERNET` permission and should stay that way.
+- **Network only for Google Photos.** The `INTERNET` permission exists solely for uploading albums the user sends to Google Photos. No analytics, crash reporting or other servers.
 
 ## Getting started
 
