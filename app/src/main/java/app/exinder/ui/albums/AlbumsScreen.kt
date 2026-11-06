@@ -226,7 +226,7 @@ fun AlbumScreen(container: AppContainer, albumId: Long, onBack: () -> Unit) {
                     if (outcome.trashed > 0) {
                         add(resources.getQuantityString(R.plurals.trashed_count, outcome.trashed, outcome.trashed))
                     }
-                }.joinToString(" · ")
+                }.joinToString(" · ") + outcome.error?.let { "\n" + it }.orEmpty()
 
                 AlbumSender.Outcome.NeedsSignIn -> resources.getString(R.string.needs_signin)
 

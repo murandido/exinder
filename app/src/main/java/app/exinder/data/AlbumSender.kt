@@ -1,5 +1,6 @@
 package app.exinder.data
 
+import android.util.Log
 import androidx.core.net.toUri
 import java.io.IOException
 
@@ -17,8 +18,13 @@ class AlbumSender(
 
     /** How a send ended. */
     sealed interface Outcome {
-        /** [sent] files reached the album, [failed] didn't (they can be retried), [trashed] originals went to the trash. */
-        data class Done(val sent: Int, val failed: Int, val trashed: Int) : Outcome
+        /**
+         * [sent] files reached the album, [failed] didn't (they can be retried),
+         * [trashed] originals went to the trash. [error] is the first failure's
+         * reason, shown to the user so a setup problem can be told apart from a
+         * network hiccup.
+         */
+        data class Done(val sent: Int, val failed: Int, val trashed: Int, val error: String? = null) : Outcome
 
         /** Google sign-in was declined or isn't set up for this build. */
         data object NeedsSignIn : Outcome
@@ -90,17 +96,21 @@ class AlbumSender(
             }
         } catch (_: GooglePhotos.NotAuthorized) {
             return Outcome.NeedsSignIn
-        } catch (_: IOException) {
+        } catch (e: IOException) {
+            Log.w(TAG, "creating the Google Photos album failed", e)
             items.forEach { albums.setState(it.uri, AlbumItemState.FAILED) }
-            return Outcome.Done(0, items.size, 0)
+            return Outcome.Done(0, items.size, 0, e.message)
         }
 
         // Upload every file first, then add them to the album in batches.
         val uploads = HashMap<String, AlbumItem>()
+        var error: String? = null
         items.forEachIndexed { i, item ->
             val uploadToken = try {
                 withToken { photos.upload(it, item.uri.toUri(), item.mime, item.size) }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.w(TAG, "uploading ${item.name} failed", e)
+                error = error ?: e.message
                 null
             }
             if (uploadToken == null) {
@@ -115,7 +125,9 @@ class AlbumSender(
             withToken { t ->
                 photos.addToAlbum(t, googleId, uploads.map { GooglePhotos.Upload(it.key, it.value.name) })
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "adding uploads to the album failed", e)
+            error = error ?: e.message
             emptyMap()
         }
         val sent = uploads.filter { (uploadToken, _) -> added[uploadToken] == true }.values.toList()
@@ -124,7 +136,7 @@ class AlbumSender(
         }
 
         val trashed = if (trashOriginals && sent.isNotEmpty()) trash(sent) else 0
-        return Outcome.Done(sent.size, items.size - sent.size, trashed)
+        return Outcome.Done(sent.size, items.size - sent.size, trashed, error)
     }
 
     /** Sends originals already safe in Google Photos to the phone's trash, and records it. */
@@ -139,6 +151,8 @@ class AlbumSender(
     }
 
     companion object {
+        private const val TAG = "AlbumSender"
+
         /** A folder name from an album name: no path separators or characters Android rejects. */
         fun folderName(album: String): String =
             album.trim().replace(Regex("""[\\/:*?"<>|]"""), "_").trim('.', ' ').ifEmpty { "Album" }

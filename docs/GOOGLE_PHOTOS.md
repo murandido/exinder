@@ -53,9 +53,10 @@ There is no client ID or secret to copy into the app: Android matches the app to
 
 | What you see | Likely cause |
 | :-- | :-- |
-| "couldn't sign in to Google Photos" right away | The OAuth client doesn't match: wrong package name, wrong SHA-1 (built on another machine?), or the Photos Library API isn't enabled. |
-| Sign-in screen says the app isn't verified / access blocked | Your account isn't in the consent screen's **test users**. |
-| Some files show a red "failed" mark | The upload or the album step failed (network, a file Google Photos doesn't accept). Tap **send** again to retry just those. |
+| "couldn't sign in to Google Photos" right away | The OAuth client doesn't match: wrong package name, or wrong SHA-1 (built on another machine?). |
+| Sign-in screen says "Access blocked" / `access_denied` | Your account isn't in the consent screen's **test users** (step 2.3). |
+| Sign-in works, but every file fails with "Photos Library API has not been used in project … or it is disabled" | Step 2.2 was skipped: enable the **Photos Library API** in the same project. It can take a few minutes to take effect. |
+| Some files show a red "failed" mark | The upload or the album step failed (network, a file Google Photos doesn't accept). The message after a send says what Google answered. Tap **send** again to retry just those. |
 
 ## Privacy
 

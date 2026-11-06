@@ -154,8 +154,12 @@ class GooglePhotos(private val context: Context) {
         val code = connection.responseCode
         if (code == HttpURLConnection.HTTP_UNAUTHORIZED) throw Unauthorized()
         if (code !in 200..299) {
-            val error = connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
-            throw IOException("Google Photos answered $code: ${error.take(300)}")
+            val body = connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
+            // Google's error JSON carries a readable message (e.g. "Photos Library API
+            // has not been used in project ..."); show that rather than the raw JSON.
+            val message = runCatching { JSONObject(body).getJSONObject("error").getString("message") }
+                .getOrDefault(body)
+            throw IOException("Google Photos ($code): ${message.take(300)}")
         }
         return connection.inputStream.bufferedReader().use { it.readText() }
     }
