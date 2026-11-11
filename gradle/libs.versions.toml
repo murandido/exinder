@@ -1,5 +1,5 @@
 [versions]
-agp = "9.5.0"
+agp = "9.5.1"
 kotlin = "2.4.21"
 ksp = "2.3.13"
 coreKtx = "1.19.1"
@@ -12,8 +12,8 @@ datastore = "1.3.0"
 media3 = "1.11.1"
 coil = "3.6.3"
 junit = "4.13.2"
-playServicesAuth = "21.6.0"
-mockk = "1.14.11"
+playServicesAuth = "22.0.0"
+mockk = "1.14.12"
 ktlint = "1.8.0"
 
 [libraries]
